@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현장 장비 수리 부품 및 재고 관리 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK (Modular v9) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // ==========================================
+        // [설정 영역] 본인의 파이어베이스 설정값으로 변경하세요
+        // ==========================================
+ const firebaseConfig = {
+    apiKey: "AIzaSyAZ3cQajFfkaTRli2SIMavKuhvEc33fG8",
+    authDomain: "parts-ba9df.firebaseapp.com",
+    projectId: "parts-ba9df",
+    storageBucket: "parts-ba9df.firebasestorage.app",
+    messagingSenderId: "50627274008",
+    appId: "1:50627274008:web:9e2a153a532d861df82a6d",
+    measurementId: "G-GTWP51ML5Y"
+};
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 링크 접속 시 로그인 창 없이 자동 통과 (익명 인증)
+        signInAnonymously(auth)
+            .then(() => { console.log("실시간 서버 연결 성공"); })
+            .catch((error) => { console.error("서버 연결 실패:", error); });
+
+        // 전역 데이터 변수
+        window.partsData = [];
+        window.teamData = [];
+        window.historyData = [];
+
+        // 1. 실시간 데이터 동기화 (Firestore 리스너)
+        onSnapshot(collection(db, "parts"), (snapshot) => {
+            window.partsData = [];
+            snapshot.forEach((docSnap) => {
+                window.partsData.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if(typeof renderPartsTable === 'function') renderPartsTable();
+            if(typeof updateDropdowns === 'function') updateDropdowns();
+            if(typeof updateDashboard === 'function') updateDashboard();
+        });
+
+        onSnapshot(collection(db, "team"), (snapshot) => {
+            window.teamData = [];
+            snapshot.forEach((docSnap) => {
+                window.teamData.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if(typeof renderTeamTable === 'function') renderTeamTable();
+            if(typeof updateDropdowns === 'function') updateDropdowns();
+            if(typeof updateDashboard === 'function') updateDashboard();
+        });
+
+        onSnapshot(collection(db, "history"), (snapshot) => {
+            window.historyData = [];
+            snapshot.forEach((docSnap) => {
+                window.historyData.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if(typeof renderTrackingTable === 'function') renderTrackingTable();
+            if(typeof updateDashboard === 'function') updateDashboard();
+        });
+
+        // 데이터 추가/수정/삭제 함수들을 전역으로 등록
+        window.addNewPart = async function(e) {
+            e.preventDefault();
+            const code = document.getElementById('part-code').value.trim();
+            const name = document.getElementById('part-name').value.trim();
+            const loc = document.getElementById('part-loc').value.trim();
+            const qty = parseInt(document.getElementById('part-qty').value);
+
+            if(!code || !name || isNaN(qty)) return;
+
+            try {
+                await addDoc(collection(db, "parts"), { code, name, loc, qty, updatedAt: serverTimestamp() });
+                document.getElementById('part-form').reset();
+                alert('부품 정보가 실시간 서버에 저장되었습니다.');
+            } catch (err) {
+                console.error(err);
+                alert('저장 중 오류가 발생했습니다.');
+            }
+        };
+
+        window.removePart = async function(id) {
+            if(confirm('이 부품을 삭제하시겠습니까?')) {
+                await deleteDoc(doc(db, "parts", id));
+            }
+        };
+
+        window.addNewTeamMember = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('team-name').value.trim();
+            const role = document.getElementById('team-role').value.trim();
+            const phone = document.getElementById('team-phone').value.trim();
+
+            if(!name) return;
+
+            try {
+                await addDoc(collection(db, "team"), { name, role, phone, updatedAt: serverTimestamp() });
+                document.getElementById('team-form').reset();
+                alert('팀원이 등록되었습니다.');
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        window.removeTeamMember = async function(id) {
+            if(confirm('팀원을 삭제하시겠습니까?')) {
+                await deleteDoc(doc(db, "team", id));
+            }
+        };
+
+        window.processOutboundItem = async function(e) {
+            e.preventDefault();
+            const partId = document.getElementById('out-part').value;
+            const qty = parseInt(document.getElementById('out-qty').value);
+            const targetPart = window.partsData.find(p => p.id === partId);
+
+            if(!targetPart) return alert('부품을 선택해주세요.');
+            if(targetPart.qty < qty) {
+                alert(`재고가 부족합니다! (현재고: ${targetPart.qty}개)`);
+                return;
+            }
+
+            // 재고 차감 반영
+            await updateDoc(doc(db, "parts", partId), { qty: targetPart.qty - qty });
+
+            // 출고 이력 기록
+            await addDoc(collection(db, "history"), {
+                date: new Date().toLocaleString(),
+                wo: document.getElementById('out-wo').value,
+                serial: document.getElementById('out-serial').value,
+                engineer: document.getElementById('out-engineer').value,
+                partName: targetPart.name,
+                qty: qty,
+                oldPartStatus: document.getElementById('out-oldpart').value,
+                status: '미채움 (진행중)',
+                updatedAt: serverTimestamp()
+            });
+
+            document.getElementById('outbound-form').reset();
+            alert('출고 처리가 완료되었습니다.');
+            switchTab('tracking');
+        };
+
+        window.completeTrackingItem = async function(id) {
+            await updateDoc(doc(db, "history", id), { status: '정상 완료' });
+            alert('정상 완료 처리되었습니다.');
+        };
+    </script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+            <div class="p-5 border-b border-slate-800">
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked text-blue-500"></i> 부품 재고 추적
+                </h1>
+                <p class="text-xs text-slate-500 mt-1">Field Parts & Tracking System</p>
+            </div>
+            <nav class="flex-1 p-4 space-y-1">
+                <button type="button" onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-blue-600 text-white transition-colors">
+                    <i class="fa-solid fa-chart-pie w-5"></i> 대시보드
+                </button>
+                <button type="button" onclick="switchTab('parts')" id="nav-parts" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300 transition-colors">
+                    <i class="fa-solid fa-screwdriver-wrench w-5"></i> 부품 정보 등록/관리
+                </button>
+                <button type="button" onclick="switchTab('team')" id="nav-team" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300 transition-colors">
+                    <i class="fa-solid fa-users w-5"></i> 팀원(엔지니어) 등록
+                </button>
+                <button type="button" onclick="switchTab('outbound')" id="nav-outbound" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300 transition-colors">
+                    <i class="fa-solid fa-truck-ramp-box w-5"></i> 부품 출고 (수리용)
+                </button>
+                <button type="button" onclick="switchTab('tracking')" id="nav-tracking" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300 transition-colors">
+                    <i class="fa-solid fa-clipboard-check w-5"></i> 미채움 / 구품반납 추적
+                </button>
+            </nav>
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+                &copy; 2026 Field Parts Management
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10">
+                <h2 id="header-title" class="text-lg font-bold text-gray-800">대시보드</h2>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm bg-green-50 text-green-700 px-3 py-1 rounded-full font-medium"><i class="fa-solid fa-circle text-xs mr-1"></i>실시간 서버 연동됨</span>
+                </div>
+            </header>
+
+            <div class="p-6 flex-1">
+                <!-- 1. DASHBOARD TAB -->
+                <div id="tab-dashboard" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-gray-500 font-medium">등록된 팀원</p>
+                                <h3 id="dash-team-count" class="text-2xl font-bold text-gray-800 mt-1">0명</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-gray-500 font-medium">등록된 부품 품목</p>
+                                <h3 id="dash-parts-count" class="text-2xl font-bold text-gray-800 mt-1">0개</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-box"></i></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-gray-500 font-medium">미채움 / 구품 미반납</p>
+                                <h3 id="dash-pending-count" class="text-2xl font-bold text-red-600 mt-1">0건</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-clock-rotate-left text-blue-600 mr-2"></i>최근 미결(미채움) 출고 현황</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-gray-600">
+                                <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                                    <tr>
+                                        <th class="p-3">출고일시</th>
+                                        <th class="p-3">작업지시서</th>
+                                        <th class="p-3">담당 엔지니어</th>
+                                        <th class="p-3">부품명</th>
+                                        <th class="p-3">수량</th>
+                                        <th class="p-3">상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-recent-table" class="divide-y divide-gray-100">
+                                    <tr><td colspan="6" class="p-4 text-center text-gray-400">데이터가 없습니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PARTS TAB -->
+                <div id="tab-parts" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-plus text-blue-600 mr-2"></i>신규 부품 등록</h3>
+                            <form id="part-form" onsubmit="addNewPart(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">부품 품번 (코드)</label>
+                                    <input type="text" id="part-code" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: PT-1001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">부품명</label>
+                                    <input type="text" id="part-name" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: 메인 컨트롤 보드">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">창고 위치 (Location)</label>
+                                    <input type="text" id="part-loc" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: A구역-01번">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">초기 부품 개수 (현재고)</label>
+                                    <input type="number" id="part-qty" required min="0" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="10">
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors shadow-sm">부품 등록 저장</button>
+                            </form>
+                        </div>
+
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-base font-bold text-gray-800"><i class="fa-solid fa-list text-blue-600 mr-2"></i>등록된 부품 목록</h3>
+                                <input type="text" id="part-search" oninput="renderPartsTable()" placeholder="부품명 또는 품번 검색..." class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-60">
+                            </div>
+                            <div class="overflow-x-auto max-h-[450px]">
+                                <table class="w-full text-left text-sm text-gray-600">
+                                    <thead class="bg-gray-50 text-gray-700 uppercase text-xs sticky top-0">
+                                        <tr>
+                                            <th class="p-3">품번</th>
+                                            <th class="p-3">부품명</th>
+                                            <th class="p-3">위치</th>
+                                            <th class="p-3">재고 수량</th>
+                                            <th class="p-3">관리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="parts-table-body" class="divide-y divide-gray-100">
+                                        <tr><td colspan="5" class="p-4 text-center text-gray-400">등록된 부품이 없습니다.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. TEAM TAB -->
+                <div id="tab-team" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>팀원(엔지니어) 등록</h3>
+                            <form id="team-form" onsubmit="addNewTeamMember(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">이름</label>
+                                    <input type="text" id="team-name" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="예: 홍길동">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">소속 / 직책</label>
+                                    <input type="text" id="team-role" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="예: 필드서비스 1팀 / 선임">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">연락처</label>
+                                    <input type="text" id="team-phone" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="예: 010-1234-5678">
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors shadow-sm">팀원 등록 저장</button>
+                            </form>
+                        </div>
+
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-users text-indigo-600 mr-2"></i>현장 엔지니어 명단</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm text-gray-600">
+                                    <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                                        <tr>
+                                            <th class="p-3">이름</th>
+                                            <th class="p-3">소속/직책</th>
+                                            <th class="p-3">연락처</th>
+                                            <th class="p-3">관리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="team-table-body" class="divide-y divide-gray-100">
+                                        <tr><td colspan="4" class="p-4 text-center text-gray-400">등록된 팀원이 없습니다.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. OUTBOUND TAB -->
+                <div id="tab-outbound" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-2xl mx-auto">
+                        <h3 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-file-invoice text-blue-600 mr-2"></i>부품 출고 및 작업지시서 매칭</h3>
+                        <form id="outbound-form" onsubmit="processOutboundItem(event)" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">작업지시서 (Work Order No.)</label>
+                                    <input type="text" id="out-wo" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: WO-2026-001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">수리 장비 Serial No.</label>
+                                    <input type="text" id="out-serial" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: EQ-SN-9921">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">담당 엔지니어 (팀원)</label>
+                                    <select id="out-engineer" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">팀원을 선택하세요</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">출고 부품 선택</label>
+                                    <select id="out-part" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">부품을 선택하세요</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">출고 수량</label>
+                                    <input type="number" id="out-qty" required min="1" value="1" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">구품(Old Part) 반납 예정 여부</label>
+                                    <select id="out-oldpart" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="필요 (반납 필수)">필요 (반납 필수)</option>
+                                        <option value="해당없음 (소모품)">해당없음 (소모품)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg text-sm transition-colors shadow-sm mt-4">부품 출고 확정 및 미결 등록</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 5. TRACKING TAB -->
+                <div id="tab-tracking" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-base font-bold text-gray-800"><i class="fa-solid fa-clipboard-check text-blue-600 mr-2"></i>미채움 및 구품 반납 추적 관리</h3>
+                            <span class="text-xs text-gray-500">현장 수리 후 사용 완료 및 구품이 반납되면 [처리완료] 버튼을 누르세요.</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-gray-600">
+                                <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                                    <tr>
+                                        <th class="p-3">출고일시</th>
+                                        <th class="p-3">작업지시서 / 장비SN</th>
+                                        <th class="p-3">담당자</th>
+                                        <th class="p-3">부품명 (수량)</th>
+                                        <th class="p-3">구품 반납상태</th>
+                                        <th class="p-3">조치</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tracking-table-body" class="divide-y divide-gray-100">
+                                    <tr><td colspan="6" class="p-4 text-center text-gray-400">출고된 이력이 없습니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- UI 로직 스크립트 -->
+    <script>
+        function switchTab(tabId) {
+            ['dashboard', 'parts', 'team', 'outbound', 'tracking'].forEach(t => {
+                const tabEl = document.getElementById(`tab-${t}`);
+                const navEl = document.getElementById(`nav-${t}`);
+                if(tabEl) tabEl.classList.add('hidden');
+                if(navEl) {
+                    navEl.classList.remove('bg-blue-600', 'text-white');
+                    navEl.classList.add('hover:bg-slate-800', 'text-slate-300');
+                }
+            });
+            
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if(activeTab) activeTab.classList.remove('hidden');
+            if(activeNav) {
+                activeNav.classList.add('bg-blue-600', 'text-white');
+                activeNav.classList.remove('hover:bg-slate-800', 'text-slate-300');
+            }
+
+            const titles = {
+                'dashboard': '대시보드',
+                'parts': '부품 정보 등록 및 관리',
+                'team': '팀원(엔지니어) 등록 및 관리',
+                'outbound': '부품 출고 (수리용 매칭)',
+                'tracking': '미채움 및 구품 반납 추적'
+            };
+            const headerTitle = document.getElementById('header-title');
+            if(headerTitle) headerTitle.innerText = titles[tabId];
+        }
+
+        function renderPartsTable() {
+            const tbody = document.getElementById('parts-table-body');
+            const searchEl = document.getElementById('part-search');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            const keyword = searchEl ? searchEl.value.toLowerCase() : '';
+            const filtered = window.partsData.filter(p => p.name.toLowerCase().includes(keyword) || p.code.toLowerCase().includes(keyword));
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">등록된 부품이 없습니다.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach((p) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 font-medium text-gray-900">${p.code}</td>
+                        <td class="p-3">${p.name}</td>
+                        <td class="p-3 text-gray-500">${p.loc || '-'}</td>
+                        <td class="p-3 font-bold text-blue-600">${p.qty}개</td>
+                        <td class="p-3"><button type="button" onclick="removePart('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-medium"><i class="fa-solid fa-trash"></i> 삭제</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderTeamTable() {
+            const tbody = document.getElementById('team-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            if(window.teamData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">등록된 팀원이 없습니다.</td></tr>`;
+                return;
+            }
+            window.teamData.forEach((m) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 font-medium text-gray-900">${m.name}</td>
+                        <td class="p-3 text-gray-500">${m.role || '-'}</td>
+                        <td class="p-3 text-gray-500">${m.phone || '-'}</td>
+                        <td class="p-3"><button type="button" onclick="removeTeamMember('${m.id}')" class="text-red-500 hover:text-red-700 text-xs font-medium"><i class="fa-solid fa-trash"></i> 삭제</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateDropdowns() {
+            const engSelect = document.getElementById('out-engineer');
+            if(engSelect) {
+                engSelect.innerHTML = `<option value="">팀원을 선택하세요</option>`;
+                window.teamData.forEach(m => {
+                    engSelect.innerHTML += `<option value="${m.name}">${m.name} (${m.role || ''})</option>`;
+                });
+            }
+
+            const partSelect = document.getElementById('out-part');
+            if(partSelect) {
+                partSelect.innerHTML = `<option value="">부품을 선택하세요</option>`;
+                window.partsData.forEach(p => {
+                    partSelect.innerHTML += `<option value="${p.id}">${p.name} (현재고: ${p.qty}개)</option>`;
+                });
+            }
+        }
+
+        function renderTrackingTable() {
+            const tbody = document.getElementById('tracking-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            if(window.historyData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">출고된 이력이 없습니다.</td></tr>`;
+                return;
+            }
+            window.historyData.forEach(h => {
+                const isDone = h.status === '정상 완료';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 text-xs text-gray-500">${h.date}</td>
+                        <td class="p-3"><span class="font-medium text-gray-900">${h.wo}</span><span class="text-xs text-gray-400 block">SN: ${h.serial}</span></td>
+                        <td class="p-3">${h.engineer}</td>
+                        <td class="p-3">${h.partName} <span class="text-xs text-blue-600 font-semibold">(${h.qty}개)</span></td>
+                        <td class="p-3"><span class="px-2 py-1 text-xs rounded-full ${isDone ? 'bg-gray-100 text-gray-600' : 'bg-amber-50 text-amber-700 font-medium'}">${h.oldPartStatus}</span></td>
+                        <td class="p-3">
+                            ${isDone ? '<span class="text-xs text-green-600 font-semibold"><i class="fa-solid fa-check"></i> 완료됨</span>' : `<button type="button" onclick="completeTrackingItem('${h.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded text-xs font-medium transition-colors">처리완료</button>`}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateDashboard() {
+            const teamCountEl = document.getElementById('dash-team-count');
+            const partsCountEl = document.getElementById('dash-parts-count');
+            const pendingCountEl = document.getElementById('dash-pending-count');
+            const recentTableEl = document.getElementById('dash-recent-table');
+
+            if(teamCountEl) teamCountEl.innerText = window.teamData.length + '명';
+            if(partsCountEl) partsCountEl.innerText = window.partsData.length + '개';
+
+            const pendingItems = window.historyData.filter(h => h.status !== '정상 완료');
+            if(pendingCountEl) pendingCountEl.innerText = pendingItems.length + '건';
+
+            if(recentTableEl) {
+                recentTableEl.innerHTML = '';
+                if(pendingItems.length === 0) {
+                    recentTableEl.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">미결 출고 건이 없습니다.</td></tr>`;
+                } else {
+                    pendingItems.slice(0, 5).forEach(h => {
+                        recentTableEl.innerHTML += `
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 text-xs text-gray-500">${h.date}</td>
+                                <td class="p-3 font-medium text-gray-900">${h.wo}</td>
+                                <td class="p-3">${h.engineer}</td>
+                                <td class="p-3">${h.partName}</td>
+                                <td class="p-3">${h.qty}개</td>
+                                <td class="p-3"><span class="px-2 py-1 text-xs bg-red-50 text-red-600 rounded-full font-medium">미채움</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
