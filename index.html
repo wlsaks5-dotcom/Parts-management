@@ -15,24 +15,24 @@
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         // ==========================================
-        // [설정 영역] 본인의 파이어베이스 설정값으로 변경하세요
+        // [설정 영역] 파이어베이스 설정값
         // ==========================================
- const firebaseConfig = {
-    apiKey: "AIzaSyAZ3cQajFfkaTRli2SIMavKuhvEc33fG8",
-    authDomain: "parts-ba9df.firebaseapp.com",
-    projectId: "parts-ba9df",
-    storageBucket: "parts-ba9df.firebasestorage.app",
-    messagingSenderId: "50627274008",
-    appId: "1:50627274008:web:9e2a153a532d861df82a6d",
-    measurementId: "G-GTWP51ML5Y"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZ3cQajFfkaTRli2SIMavKuhvEc33fG8",
+            authDomain: "parts-ba9df.firebaseapp.com",
+            projectId: "parts-ba9df",
+            storageBucket: "parts-ba9df.firebasestorage.app",
+            messagingSenderId: "50627274008",
+            appId: "1:50627274008:web:9e2a153a532d861df82a6d",
+            measurementId: "G-GTWP51ML5Y"
+        };
 
         // Firebase 초기화
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 링크 접속 시 로그인 창 없이 자동 통과 (익명 인증)
+        // 익명 인증
         signInAnonymously(auth)
             .then(() => { console.log("실시간 서버 연결 성공"); })
             .catch((error) => { console.error("서버 연결 실패:", error); });
@@ -112,6 +112,7 @@
                 alert('팀원이 등록되었습니다.');
             } catch (err) {
                 console.error(err);
+                alert('팀원 등록 중 오류가 발생했습니다.');
             }
         };
 
@@ -133,10 +134,8 @@
                 return;
             }
 
-            // 재고 차감 반영
             await updateDoc(doc(db, "parts", partId), { qty: targetPart.qty - qty });
 
-            // 출고 이력 기록
             await addDoc(collection(db, "history"), {
                 date: new Date().toLocaleString(),
                 wo: document.getElementById('out-wo').value,
@@ -422,7 +421,7 @@
         </main>
     </div>
 
-    <!-- UI 로직 스크립트 -->
+    <!-- UI 및 렌더링 로직 스크립트 -->
     <script>
         function switchTab(tabId) {
             ['dashboard', 'parts', 'team', 'outbound', 'tracking'].forEach(t => {
@@ -537,7 +536,7 @@
                         <td class="p-3">${h.partName} <span class="text-xs text-blue-600 font-semibold">(${h.qty}개)</span></td>
                         <td class="p-3"><span class="px-2 py-1 text-xs rounded-full ${isDone ? 'bg-gray-100 text-gray-600' : 'bg-amber-50 text-amber-700 font-medium'}">${h.oldPartStatus}</span></td>
                         <td class="p-3">
-                            ${isDone ? '<span class="text-xs text-green-600 font-semibold"><i class="fa-solid fa-check"></i> 완료됨</span>' : `<button type="button" onclick="completeTrackingItem('${h.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded text-xs font-medium transition-colors">처리완료</button>`}
+                            ${isDone ? '<span class="text-xs text-green-600 font-semibold"><i class="fa-solid fa-check"></i> 처리완료</span>' : `<button type="button" onclick="completeTrackingItem('${h.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1 rounded text-xs font-medium">처리완료</button>`}
                         </td>
                     </tr>
                 `;
@@ -550,16 +549,16 @@
             const pendingCountEl = document.getElementById('dash-pending-count');
             const recentTableEl = document.getElementById('dash-recent-table');
 
-            if(teamCountEl) teamCountEl.innerText = window.teamData.length + '명';
-            if(partsCountEl) partsCountEl.innerText = window.partsData.length + '개';
+            if(teamCountEl) teamCountEl.innerText = `${window.teamData.length}명`;
+            if(partsCountEl) partsCountEl.innerText = `${window.partsData.length}개`;
 
             const pendingItems = window.historyData.filter(h => h.status !== '정상 완료');
-            if(pendingCountEl) pendingCountEl.innerText = pendingItems.length + '건';
+            if(pendingCountEl) pendingCountEl.innerText = `${pendingItems.length}건`;
 
             if(recentTableEl) {
                 recentTableEl.innerHTML = '';
                 if(pendingItems.length === 0) {
-                    recentTableEl.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">미결 출고 건이 없습니다.</td></tr>`;
+                    recentTableEl.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">미결(미채움) 내역이 없습니다.</td></tr>`;
                 } else {
                     pendingItems.slice(0, 5).forEach(h => {
                         recentTableEl.innerHTML += `
@@ -568,8 +567,8 @@
                                 <td class="p-3 font-medium text-gray-900">${h.wo}</td>
                                 <td class="p-3">${h.engineer}</td>
                                 <td class="p-3">${h.partName}</td>
-                                <td class="p-3">${h.qty}개</td>
-                                <td class="p-3"><span class="px-2 py-1 text-xs bg-red-50 text-red-600 rounded-full font-medium">미채움</span></td>
+                                <td class="p-3 font-semibold text-blue-600">${h.qty}개</td>
+                                <td class="p-3"><span class="px-2 py-1 text-xs rounded-full bg-amber-50 text-amber-700 font-medium">${h.status}</span></td>
                             </tr>
                         `;
                     });
