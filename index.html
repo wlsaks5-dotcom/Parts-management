@@ -8,12 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode 라이브러리 -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Firebase SDK (v8 기준 호환 코드) -->
+    <!-- Firebase SDK (v8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <style>
-        /* 모바일 터치 및 클릭 반응성 개선 */
         button, a, input, select, [onclick] {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -23,44 +22,90 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6 mb-6">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">📦 부품 관리 시스템</h1>
 
-        <!-- 1. 엔지니어 정보 표시 및 변경 영역 -->
+        <!-- 1. 엔지니어 정보 표시 및 변경 -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <p class="text-xs text-gray-500">현재 등록된 사용자 (기기 소유자)</p>
             <div class="flex justify-between items-center mt-1">
                 <span id="engineerNameDisplay" class="font-bold text-lg text-blue-700">미등록</span>
-                <button onclick="changeEngineer()" class="text-xs bg-white border border-gray-300 px-3 py-1.5 rounded shadow-sm hover:bg-gray-50">변경</button>
+                <button onclick="changeEngineer()" class="text-xs bg-white border border-gray-300 px-3 py-1.5 rounded shadow-sm">변경</button>
             </div>
         </div>
 
-        <!-- 2. 작업 모드 표시 및 전환 영역 (입고 / 출고) -->
+        <!-- 2. 작업 모드 표시 및 모드 전환 (비밀번호: 1234) -->
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
             <div class="flex justify-between items-center">
                 <div>
                     <p class="text-xs text-gray-500">현재 작업 모드</p>
                     <span id="workModeDisplay" class="font-bold text-base text-green-700">📤 [사용 모드 - 부품 출고]</span>
                 </div>
-                <!-- 관리자용 모드 전환 버튼 (비밀번호나 토글 역할) -->
-                <button onclick="toggleWorkMode()" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded shadow-sm hover:bg-gray-700">모드 변경</button>
+                <button onclick="toggleWorkMode()" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded shadow-sm">모드 변경</button>
             </div>
         </div>
 
-        <!-- 3. QR 스캔 실행 버튼 -->
-        <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-4 shadow-lg transition-all">
-            📷 부품 QR 스캔하기
-        </button>
+        <!-- ================= [일반 모드 영역] ================= -->
+        <div id="userModeSection">
+            <!-- QR 스캔 실행 버튼 -->
+            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-4 shadow-lg">
+                📷 부품 QR 스캔하기
+            </button>
 
-        <!-- 4. 카메라 화면이 출력될 영역 -->
-        <div id="reader" class="rounded-lg overflow-hidden shadow-inner mb-4" style="display: none;"></div>
+            <!-- 카메라 화면 출력 영역 -->
+            <div id="reader" class="rounded-lg overflow-hidden shadow-inner mb-4" style="display: none;"></div>
 
-        <!-- 스캔 취소 버튼 (카메라 켜졌을 때만 보임) -->
-        <button id="stopBtn" onclick="stopScanner()" class="w-full bg-red-500 text-white py-2 rounded-lg font-bold text-sm mb-6" style="display: none;">
-            ❌ 스캔 취소
-        </button>
+            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-red-500 text-white py-2 rounded-lg font-bold text-sm mb-6" style="display: none;">
+                ❌ 스캔 취소
+            </button>
+        </div>
 
-        <!-- 최근 활동 로그 표시 영역 -->
+        <!-- ================= [관리자 등록 패널 (초기 숨김)] ================= -->
+        <div id="adminModeSection" style="display: none;" class="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
+            <h2 class="text-sm font-bold text-yellow-800 mb-3">🛠️ [관리자 모드] 정보 등록 패널</h2>
+
+            <!-- 탭 전환 버튼 -->
+            <div class="flex border-b border-yellow-200 mb-4">
+                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600">부품 정보 등록</button>
+                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
+            </div>
+
+            <!-- 1) 부품 등록 폼 -->
+            <div id="adminPartForm" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
+                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
+                    <input type="text" id="inputPartName" placeholder="예: 모터 드라이버" class="w-full text-xs p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">초기 입고 수량</label>
+                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2 border rounded">
+                </div>
+                <button onclick="savePartToFirebase()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded text-xs font-bold shadow">
+                    💾 부품 정보 DB 등록
+                </button>
+            </div>
+
+            <!-- 2) 엔지니어 등록 폼 -->
+            <div id="adminEngForm" class="space-y-3" style="display: none;">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">엔지니어 성명</label>
+                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">소속 / 부서 / 직급</label>
+                    <input type="text" id="inputEngDept" placeholder="예: 기술지원팀 / FSE" class="w-full text-xs p-2 border rounded">
+                </div>
+                <button onclick="saveEngineerToFirebase()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded text-xs font-bold shadow">
+                    💾 엔지니어 정보 DB 등록
+                </button>
+            </div>
+        </div>
+
+        <!-- 최근 처리 내역 -->
         <div class="border-t pt-4">
             <h2 class="text-sm font-bold text-gray-700 mb-2">📋 최근 처리 내역</h2>
             <div id="historyLog" class="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-lg max-h-40 overflow-y-auto">
@@ -70,29 +115,26 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🔑 [중요] 본인의 파이어베이스 설정값으로 채워넣으세요
-        // ==========================================
+        // 파이어베이스 설정 (본인 정보 유지)
         const firebaseConfig = {
             apiKey: "본인의_API_KEY_입력",
             authDomain: "본인의_AUTH_DOMAIN_입력",
-            projectId: "parts-ba9df", // 기존 사용 중이신 프로젝트 ID
+            projectId: "parts-ba9df",
             storageBucket: "본인의_STORAGE_BUCKET_입력",
             messagingSenderId: "본인의_MESSAGING_SENDER_ID_입력",
             appId: "본인의_APP_ID_입력"
         };
 
-        // Firebase 초기화
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
 
-        // ==========================================
-        // 👤 엔지니어 기기 등록 관리 로직
-        // ==========================================
+        // 관리자 비밀번호
+        const ADMIN_PASSWORD = "1234";
+
         let currentEngineer = localStorage.getItem('registered_engineer') || '';
-        let currentWorkMode = 'USE'; // 기본값: 'USE' (사용/출고), 'IN' (입고/재고추가)
+        let currentWorkMode = 'USE'; // 'USE'(출고), 'IN'(입고), 'ADMIN'(관리자 등록)
         let html5QrCode = null;
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -112,14 +154,14 @@
 
         function checkEngineerRegistration() {
             if (!currentEngineer) {
-                let name = prompt("사용 중인 엔지니어(본인) 성명을 입력하세요:");
+                let name = prompt("사용 중인 엔지니어 성명을 입력하세요:");
                 if (name && name.trim() !== "") {
                     currentEngineer = name.trim();
                     localStorage.setItem('registered_engineer', currentEngineer);
                     updateEngineerDisplay();
                 } else {
                     alert("시스템을 이용하려면 사용자 등록이 필수입니다.");
-                    checkEngineerRegistration(); // 재요청
+                    checkEngineerRegistration();
                 }
             }
         }
@@ -134,30 +176,116 @@
             }
         }
 
-        // ==========================================
-        // ⚙️ 작업 모드 전환 (출고 ⇄ 입고)
-        // ==========================================
+        // 🔒 모드 변경 (출고 ⇄ 입고 ⇄ 관리자 등록)
         function toggleWorkMode() {
+            let pwd = prompt("관리자 비밀번호를 입력하세요 (비밀번호: 1234):");
+            if (pwd !== ADMIN_PASSWORD) {
+                alert("비밀번호가 틀렸습니다.");
+                return;
+            }
+
             const modeDisplay = document.getElementById('workModeDisplay');
+            const userSection = document.getElementById('userModeSection');
+            const adminSection = document.getElementById('adminModeSection');
+
             if (currentWorkMode === 'USE') {
-                // 관리자 인증 비밀번호 등을 추가할 수도 있습니다.
-                let adminCheck = prompt("입고 모드로 전환합니다. 관리자 비밀번호 또는 확인 코드를 입력하세요 (선택):");
-                // 간단히 전환 허용
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
                 modeDisplay.className = "font-bold text-base text-blue-700";
-                alert("⚠️ [입고 모드]로 전환되었습니다.\n스캔하는 부품의 재고(입고)가 증가합니다.");
+                userSection.style.display = 'block';
+                adminSection.style.display = 'none';
+                alert("입고 모드로 전환되었습니다.");
+            } else if (currentWorkMode === 'IN') {
+                currentWorkMode = 'ADMIN';
+                modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
+                modeDisplay.className = "font-bold text-base text-yellow-700";
+                userSection.style.display = 'none';
+                adminSection.style.display = 'block';
+                alert("관리자 등록 모드로 전환되었습니다.");
             } else {
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
                 modeDisplay.className = "font-bold text-base text-green-700";
-                alert("🔄 [사용 모드]로 전환되었습니다.\n스캔하는 부품이 사용(출고) 처리됩니다.");
+                userSection.style.display = 'block';
+                adminSection.style.display = 'none';
+                alert("다시 사용(출고) 모드로 전환되었습니다.");
             }
         }
 
-        // ==========================================
-        // 📷 QR 스캐너 구동 로직
-        // ==========================================
+        // 관리자 패널 내부 탭 전환
+        function switchAdminTab(type) {
+            const partForm = document.getElementById('adminPartForm');
+            const engForm = document.getElementById('adminEngForm');
+            const tabPartBtn = document.getElementById('tabPartBtn');
+            const tabEngBtn = document.getElementById('tabEngBtn');
+
+            if (type === 'part') {
+                partForm.style.display = 'block';
+                engForm.style.display = 'none';
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
+            } else {
+                partForm.style.display = 'none';
+                engForm.style.display = 'block';
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600";
+            }
+        }
+
+        // 💾 파이어베이스에 부품 정보 저장
+        async function savePartToFirebase() {
+            const partId = document.getElementById('inputPartId').value.trim();
+            const partName = document.getElementById('inputPartName').value.trim();
+            const stock = parseInt(document.getElementById('inputPartStock').value) || 0;
+
+            if (!partId || !partName) {
+                alert("파트 넘버와 부품 이름을 모두 입력해주세요.");
+                return;
+            }
+
+            try {
+                await db.collection("parts").doc(partId).set({
+                    partId: partId,
+                    partName: partName,
+                    stock: stock,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert(`✅ 부품 등록 완료!\n- ID(QR): ${partId}\n- 이름: ${partName}\n- 수량: ${stock}`);
+                document.getElementById('inputPartId').value = '';
+                document.getElementById('inputPartName').value = '';
+                document.getElementById('inputPartStock').value = '0';
+            } catch (error) {
+                console.error(error);
+                alert("부품 저장 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 💾 파이어베이스에 엔지니어 정보 저장
+        async function saveEngineerToFirebase() {
+            const engName = document.getElementById('inputEngName').value.trim();
+            const engDept = document.getElementById('inputEngDept').value.trim();
+
+            if (!engName) {
+                alert("엔지니어 성명을 입력해주세요.");
+                return;
+            }
+
+            try {
+                await db.collection("engineers").add({
+                    name: engName,
+                    department: engDept,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert(`✅ 엔지니어 등록 완료!\n- 성명: ${engName}\n- 소속: ${engDept}`);
+                document.getElementById('inputEngName').value = '';
+                document.getElementById('inputEngDept').value = '';
+            } catch (error) {
+                console.error(error);
+                alert("엔지니어 저장 중 오류가 발생했습니다.");
+            }
+        }
+
+        // QR 스캐너 관련 로직 (출고/입고용)
         function startQrScanner() {
             if (!currentEngineer) {
                 checkEngineerRegistration();
@@ -174,23 +302,15 @@
             }
 
             html5QrCode.start(
-                { facingMode: "environment" }, // 후면 카메라 강제 지정
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
-                async (decodedText, decodedResult) => {
-                    // QR 인식 성공 시 즉시 카메라 정지
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                async (decodedText) => {
                     await stopScanner();
-                    
-                    // 모드에 따라 처리 분기
                     await handleScannedResult(decodedText);
                 },
-                (errorMessage) => {
-                    // 스캔 스캔 중 에러는 무시
-                }
+                (errorMessage) => {}
             ).catch(err => {
-                alert("카메라 권한이 거부되었거나 지원하지 않는 브라우저 환경입니다.");
+                alert("카메라 권한을 확인해주세요.");
                 readerDiv.style.display = 'none';
                 stopBtn.style.display = 'none';
             });
@@ -204,12 +324,8 @@
             document.getElementById('stopBtn').style.display = 'none';
         }
 
-        // ==========================================
-        // ⚡ 스캔 결과 처리 (사용 vs 입고)
-        // ==========================================
         async function handleScannedResult(partId) {
             if (currentWorkMode === 'USE') {
-                // 1. 부품 사용(출고) 처리
                 try {
                     await db.collection("usage_history").add({
                         partId: partId,
@@ -218,15 +334,13 @@
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                         status: "사용완료"
                     });
-                    alert(`✅ [사용 완료]\n엔지니어: ${currentEngineer}\n부품 ID: ${partId}\n사용 등록되었습니다.`);
+                    alert(`✅ [사용 완료]\n엔지니어: ${currentEngineer}\n부품 ID: ${partId}`);
                     loadRecentHistory();
                 } catch (error) {
-                    console.error("저장 실패:", error);
-                    alert("사용 데이터 전송 중 오류가 발생했습니다.");
+                    alert("사용 데이터 전송 오류");
                 }
-            } else {
-                // 2. 부품 입고(재고 추가) 처리
-                let qtyInput = prompt(`📦 [입고 처리 - 부품 ID: ${partId}]\n추가할 입고 수량을 입력하세요:`, "1");
+            } else if (currentWorkMode === 'IN') {
+                let qtyInput = prompt(`📦 [입고 처리 - 부품 ID: ${partId}]\n입고 수량 입력:`, "1");
                 if (qtyInput && !isNaN(qtyInput)) {
                     let quantity = parseInt(qtyInput);
                     try {
@@ -237,32 +351,25 @@
                             type: "IN",
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                        alert(`📦 [입고 완료]\n담당자: ${currentEngineer}\n부품 ID: ${partId}\n수량: +${quantity}개 입고되었습니다.`);
+                        alert(`📦 [입고 완료]\n부품 ID: ${partId}\n수량: +${quantity}`);
                         loadRecentHistory();
                     } catch (error) {
-                        console.error("입고 저장 실패:", error);
-                        alert("입고 데이터 전송 중 오류가 발생했습니다.");
+                        alert("입고 데이터 전송 오류");
                     }
-                } else {
-                    alert("입고가 취소되었습니다.");
                 }
             }
         }
 
-        // ==========================================
-        // 📋 최근 내역 불러오기
-        // ==========================================
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
-                // usage_history 최근 5개 조회
                 const snapshot = await db.collection("usage_history")
                     .orderBy("timestamp", "desc")
                     .limit(5)
                     .get();
 
                 if (snapshot.empty) {
-                    logContainer.innerHTML = "기록된 사용 내역이 없습니다.";
+                    logContainer.innerHTML = "기록된 내역이 없습니다.";
                     return;
                 }
 
@@ -271,13 +378,12 @@
                     const data = doc.data();
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
                     html += `<div class="py-1 border-b flex justify-between">
-                        <span><b>[${data.engineer}]</b> 부품: ${data.partId}</span>
+                        <span><b>[${data.engineer}]</b> ${data.partId}</span>
                         <span class="text-gray-400">${date}</span>
                     </div>`;
                 });
                 logContainer.innerHTML = html;
             } catch (error) {
-                console.error("로그 불러오기 실패:", error);
                 logContainer.innerHTML = "내역을 불러오지 못했습니다.";
             }
         }
