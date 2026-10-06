@@ -119,9 +119,9 @@
                     </button>
                 </div>
 
-                <!-- 부품 검색 및 출고 입력 영역 (부분 검색/자동완성 적용) -->
-                <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-3">
-                    <label class="block text-xs font-bold text-blue-900">부품 검색 및 출고 (예: pad 입력)</label>
+                <!-- 부품 검색 및 출고/입고 입력 영역 -->
+                <div id="actionBoxContainer" class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-3">
+                    <label id="actionBoxTitle" class="block text-xs font-bold text-blue-900">부품 검색 및 출고 (예: pad 입력)</label>
                     
                     <div class="relative search-container">
                         <input type="text" id="manualPartInput" placeholder="부품 이름 또는 파트 ID 부분 입력 (예: pad)" class="w-full text-xs p-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500" autocomplete="off">
@@ -140,7 +140,7 @@
                         </div>
                     </div>
 
-                    <button onclick="processCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
+                    <button id="actionProcessBtn" onclick="processCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
                         🚀 선택한 부품 출고하기
                     </button>
                 </div>
@@ -159,13 +159,11 @@
                 <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full space-y-4">
                     <h2 class="text-xs font-bold text-purple-800 uppercase tracking-wider">🛠 [관리자 모드] DB 정보 등록 패널</h2>
 
-                    <!-- 탭 상단 메뉴 (완전 분리) -->
                     <div class="flex border-b border-purple-200 pb-1">
                         <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-1.5 text-xs font-bold text-purple-700 border-b-2 border-purple-700">부품 등록 (New / Test)</button>
                         <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-1.5 text-xs font-bold text-gray-500">엔지니어 등록</button>
                     </div>
 
-                    <!-- 1. 부품 등록 탭 내용 영역 -->
                     <div id="adminPartTabContent" class="space-y-4">
                         <div class="bg-white border border-purple-200 rounded-xl p-3 shadow-sm space-y-2">
                             <p class="text-[11px] text-gray-600 font-medium">📋 파트 분류별 안전 일괄 등록</p>
@@ -194,7 +192,6 @@
                         </div>
                     </div>
 
-                    <!-- 2. 엔지니어 등록 탭 내용 영역 -->
                     <div id="adminEngTabContent" class="space-y-3" style="display: none;">
                         <p class="text-[11px] font-bold text-gray-700">신규 엔지니어 추가</p>
                         <input type="text" id="inputEngName" placeholder="엔지니어 성명 (예: 박진만)" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800">
@@ -212,7 +209,7 @@
 
         </div>
 
-        <!-- 📊 등록된 전체 파트 목록 조회 섹션 (관리자 모드에서만 노출) -->
+        <!-- 📊 등록된 전체 파트 목록 조회 섹션 -->
         <div id="adminPartsListSection" style="display: none;" class="mt-8 pt-6 border-t border-gray-200">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -314,14 +311,13 @@
         }
         const db = firebase.firestore();
 
-        const ADMIN_PASSWORD = "0304"; // 비밀번호 0304 반영
+        const ADMIN_PASSWORD = "0304";
 
         let currentEngineer = localStorage.getItem('device_engineer') || '';
-        let currentWorkMode = 'USE';
+        let currentWorkMode = 'USE'; // 'USE' (출고), 'IN' (입고), 'ADMIN' (관리자)
         let currentPartTab = 'new part';
         let html5QrCode = null;
 
-        // New Part 데이터 배열
         const newPartsData = [
             { partId: "183060", partName: "1ml O-Ring set of 8", stock: 20, type: "new part" },
             { partId: "183061-RNO", partName: "1ml Stop disks and Washer", stock: 18, type: "new part" },
@@ -377,7 +373,6 @@
             { partId: "C1000-CTRL-PCBA", partName: "C1000 Thermal Cycler-IVD Controller PCBA", stock: 1, type: "new part" }
         ];
 
-        // Test Part 데이터 배열
         const testPartsData = [
             { partId: "6605119-01", partName: "Autoload Y-drive", stock: 1, type: "test part" },
             { partId: "10013071", partName: "Shuttle Assy, CFX96-IVD", stock: 5, type: "test part" },
@@ -413,6 +408,60 @@
             loadRecentHistory();
             initPartSearchAutocomplete();
         });
+
+        // 📷 QR 스캐너 시작 함수
+        function startQrScanner() {
+            const readerDiv = document.getElementById('reader');
+            const stopBtn = document.getElementById('stopBtn');
+            readerDiv.style.display = 'block';
+            stopBtn.style.display = 'block';
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                async (decodedText) => {
+                    await stopScanner();
+                    await handleScannedResult(decodedText);
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                alert("카메라 권한을 확인해주세요.");
+                readerDiv.style.display = 'none';
+                stopBtn.style.display = 'none';
+            });
+        }
+
+        // ❌ QR 스캐너 중지 함수
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'none';
+        }
+
+        async function handleScannedResult(partId) {
+            try {
+                const partDoc = await db.collection("parts").doc(partId).get();
+                if (!partDoc.exists) {
+                    alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.`);
+                    return;
+                }
+                const partData = partDoc.data();
+                
+                document.getElementById('manualPartInput').value = partData.partName;
+                document.getElementById('selectedPartId').value = partId;
+                document.getElementById('selectedPartTypeDisplay').value = partData.type;
+                
+                if (currentWorkMode === 'USE') {
+                    await processCheckout();
+                } else if (currentWorkMode === 'IN') {
+                    await processDirectReturn(partId, partData.partName);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("QR 처리 중 오류가 발생했습니다.");
+            }
+        }
 
         // 🔍 부품 부분 검색 및 자동완성 로직
         function initPartSearchAutocomplete() {
@@ -523,16 +572,48 @@
                 document.getElementById('outQuantity').value = '1';
 
                 loadRecentHistory();
-                if (document.getElementById('adminPartsListSection').style.display !== 'none') {
-                    loadRegisteredPartsList();
-                }
             } catch (error) {
                 console.error(error);
                 alert("출고 처리 중 오류가 발생했습니다.");
             }
         }
 
-        // 📦 입고(반납) 처리 함수
+        // 📥 직접 입고 모드에서 부품 검색 후 입고 처리
+        async function processDirectReturn(partId, partName) {
+            const qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName}\n입고할 수량을 입력하세요:`, "1");
+            if (!qtyInput || isNaN(qtyInput)) return;
+            const qty = parseInt(qtyInput);
+
+            try {
+                const partRef = db.collection("parts").doc(partId);
+                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
+
+                const partDoc = await partRef.get();
+                const partData = partDoc.data();
+
+                await db.collection("usage_history").add({
+                    partId: partId,
+                    partName: partData.partName,
+                    partType: partData.type,
+                    engineer: currentEngineer,
+                    quantity: qty,
+                    action: "IN",
+                    status: "입고완료",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert(`📦 [입고 완료]\n- 부품: ${partData.partName}\n- 입고 수량: +${qty}개`);
+                document.getElementById('manualPartInput').value = '';
+                document.getElementById('selectedPartId').value = '';
+                document.getElementById('selectedPartTypeDisplay').value = '';
+                loadRecentHistory();
+            } catch (error) {
+                console.error(error);
+                alert("입고 처리 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 📦 이력 목록에서 반납 처리
         async function processReturn(historyId, partId, qty) {
             if (!confirm("이 출고 건을 입고(반납) 처리하시겠습니까?")) return;
 
@@ -540,8 +621,13 @@
                 const partRef = db.collection("parts").doc(partId);
                 await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
 
+                const partDoc = await partRef.get();
+                const partData = partDoc.data();
+
                 await db.collection("usage_history").add({
                     partId: partId,
+                    partName: partData.partName,
+                    partType: partData.type,
                     engineer: currentEngineer,
                     quantity: qty,
                     action: "IN",
@@ -553,16 +639,13 @@
 
                 alert("📦 정상적으로 입고(반납)되었습니다.");
                 loadRecentHistory();
-                if (document.getElementById('adminPartsListSection').style.display !== 'none') {
-                    loadRegisteredPartsList();
-                }
             } catch (error) {
                 console.error(error);
                 alert("입고 처리 중 오류가 발생했습니다.");
             }
         }
 
-        // 🔍 관리자 모드: 특정 파트 클릭 시 해당 부품의 상세 이력 모달 띄우기
+        // 🔍 부품 상세 이력 모달
         async function openPartHistoryModal(partId, partName) {
             document.getElementById('modalPartTitle').innerText = `📦 부품 상세 이력: ${partName} (${partId})`;
             const contentContainer = document.getElementById('modalPartHistoryContent');
@@ -605,7 +688,7 @@
             document.getElementById('partHistoryModal').style.display = 'none';
         }
 
-        // ✏️ 이력 수정 모달 열기
+        // ✏️ 이력 수정 모달
         function openEditModal(historyId, currentQty) {
             document.getElementById('editLogId').value = historyId;
             document.getElementById('editQtyInput').value = currentQty;
@@ -616,7 +699,6 @@
             document.getElementById('editModal').style.display = 'none';
         }
 
-        // 💾 이력 수정 저장
         async function saveHistoryEdit() {
             const historyId = document.getElementById('editLogId').value;
             const newQty = parseInt(document.getElementById('editQtyInput').value);
@@ -649,9 +731,6 @@
                 alert("수정이 완료되었습니다.");
                 closeEditModal();
                 loadRecentHistory();
-                if (document.getElementById('adminPartsListSection').style.display !== 'none') {
-                    loadRegisteredPartsList();
-                }
             } catch (error) {
                 console.error(error);
                 alert("수정 중 오류가 발생했습니다.");
@@ -700,7 +779,6 @@
             loadRegisteredPartsList();
         }
 
-        // 📚 등록된 파트 목록 조회 및 클릭 이벤트 연결 (파트별 이력 보기)
         async function loadRegisteredPartsList() {
             const newTableBody = document.getElementById('newPartsTableBody');
             const testTableBody = document.getElementById('testPartsTableBody');
@@ -815,15 +893,23 @@
         }
 
         function openAdminModeDirect() {
-            let pwd = prompt("관리자 비밀번호를 입력하세요 (기본: 0304):");
+            let pwd = prompt("관리자 비밀번호를 입력하세요:", "");
             if (pwd === ADMIN_PASSWORD) {
                 document.getElementById('loginModal').style.display = 'none';
                 currentWorkMode = 'ADMIN';
                 document.getElementById('workModeDisplay').innerText = "🛠 [관리자 모드 - 정보 등록]";
                 document.getElementById('workModeDisplay').className = "font-bold text-sm md:text-base text-purple-600";
+                
+                // 패널 가시성 제어
                 document.getElementById('adminModeSection').style.display = 'block';
                 document.getElementById('adminGuideBox').style.display = 'none';
                 document.getElementById('adminPartsListSection').style.display = 'block';
+                document.getElementById('actionBoxContainer').style.display = 'block';
+                document.getElementById('actionBoxTitle').innerText = "부품 검색 및 출고 (예: pad 입력)";
+                document.getElementById('actionProcessBtn').className = "w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm";
+                document.getElementById('actionProcessBtn').innerText = "🚀 선택한 부품 출고하기";
+                document.getElementById('actionProcessBtn').setAttribute("onclick", "processCheckout()");
+
                 loadRegisteredPartsList();
                 if(!currentEngineer) currentEngineer = "관리자";
                 updateEngineerDisplay();
@@ -832,28 +918,47 @@
             }
         }
 
+        // 🔄 모드 변경 순서: 출고(USE) -> 입고(IN) (비밀번호 없음, 한 번 클릭으로 즉시 전환) -> 관리자 모드(ADMIN) (비밀번호 필요) -> 출고(USE)
         function toggleWorkMode() {
             const modeDisplay = document.getElementById('workModeDisplay');
             const adminSection = document.getElementById('adminModeSection');
             const adminGuideBox = document.getElementById('adminGuideBox');
             const adminPartsListSection = document.getElementById('adminPartsListSection');
+            const actionBoxContainer = document.getElementById('actionBoxContainer');
+            const actionBoxTitle = document.getElementById('actionBoxTitle');
+            const actionProcessBtn = document.getElementById('actionProcessBtn');
 
             if (currentWorkMode === 'USE') {
+                // 1단계: 출고 모드 -> 입고 모드 (비밀번호 없이 즉시 전환)
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-green-600";
+                
                 adminSection.style.display = 'none';
                 adminGuideBox.style.display = 'flex';
                 adminPartsListSection.style.display = 'none';
+                
+                actionBoxContainer.style.display = 'block';
+                actionBoxTitle.innerText = "부품 검색 및 입고 (재고 추가)";
+                actionProcessBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm";
+                actionProcessBtn.innerText = "📦 선택한 부품 입고(재고 추가)하기";
+                actionProcessBtn.setAttribute("onclick", "processDirectReturnInput()");
+
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
-                let pwd = prompt("관리자 비밀번호를 입력하세요 (기본: 0304):");
+                // 2단계: 입고 모드 -> 관리자 모드 (비밀번호 필요)
+                let pwd = prompt("관리자 비밀번호를 입력하세요:", "");
                 if (pwd !== ADMIN_PASSWORD) {
-                    if(pwd !== null) alert("비밀번호가 틀렸습니다. 출고 모드로 돌아갑니다.");
+                    if (pwd !== null) alert("비밀번호가 틀렸습니다. 출고 모드로 돌아갑니다.");
                     currentWorkMode = 'USE';
                     modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
                     modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
                     adminPartsListSection.style.display = 'none';
+                    actionBoxContainer.style.display = 'block';
+                    actionBoxTitle.innerText = "부품 검색 및 출고 (예: pad 입력)";
+                    actionProcessBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm";
+                    actionProcessBtn.innerText = "🚀 선택한 부품 출고하기";
+                    actionProcessBtn.setAttribute("onclick", "processCheckout()");
                     return;
                 }
                 currentWorkMode = 'ADMIN';
@@ -862,16 +967,73 @@
                 adminSection.style.display = 'block';
                 adminGuideBox.style.display = 'none';
                 adminPartsListSection.style.display = 'block';
+                
+                actionBoxContainer.style.display = 'block';
+                actionBoxTitle.innerText = "부품 검색 및 출고 (예: pad 입력)";
+                actionProcessBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm";
+                actionProcessBtn.innerText = "🚀 선택한 부품 출고하기";
+                actionProcessBtn.setAttribute("onclick", "processCheckout()");
+
                 loadRegisteredPartsList();
                 alert("관리자 등록 모드로 전환되었습니다.");
             } else {
+                // 3단계: 관리자 모드 -> 출고 모드
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
                 adminSection.style.display = 'none';
                 adminGuideBox.style.display = 'flex';
                 adminPartsListSection.style.display = 'none';
+                
+                actionBoxContainer.style.display = 'block';
+                actionBoxTitle.innerText = "부품 검색 및 출고 (예: pad 입력)";
+                actionProcessBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm";
+                actionProcessBtn.innerText = "🚀 선택한 부품 출고하기";
+                actionProcessBtn.setAttribute("onclick", "processCheckout()");
+
                 alert("사용(출고) 모드로 전환되었습니다.");
+            }
+        }
+
+        // 입고 모드에서 버튼 클릭 시 실행할 직접 입고 함수
+        async function processDirectReturnInput() {
+            const partId = document.getElementById('selectedPartId').value;
+            const partName = document.getElementById('manualPartInput').value;
+            const qty = parseInt(document.getElementById('outQuantity').value) || 1;
+
+            if (!partId) {
+                alert("검색 목록에서 입고할 부품을 선택해주세요.");
+                return;
+            }
+
+            try {
+                const partRef = db.collection("parts").doc(partId);
+                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
+
+                const partDoc = await partRef.get();
+                const partData = partDoc.data();
+
+                await db.collection("usage_history").add({
+                    partId: partId,
+                    partName: partData.partName,
+                    partType: partData.type,
+                    engineer: currentEngineer,
+                    quantity: qty,
+                    action: "IN",
+                    status: "입고완료",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert(`📦 [입고 완료]\n- 부품: ${partData.partName}\n- 입고 수량: +${qty}개`);
+                document.getElementById('manualPartInput').value = '';
+                document.getElementById('selectedPartId').value = '';
+                document.getElementById('selectedPartTypeDisplay').value = '';
+                document.getElementById('outQuantity').value = '1';
+
+                loadRecentHistory();
+            } catch (error) {
+                console.error(error);
+                alert("입고 처리 중 오류가 발생했습니다.");
             }
         }
 
@@ -942,7 +1104,6 @@
             }
         }
 
-        // 📋 최근 출고/입고 내역 렌더링 (전체 카드 클릭 시 입고 처리 연동)
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
@@ -968,7 +1129,6 @@
                         `;
                     }
 
-                    // 카드 전체 클릭 시 입고 처리 진행 여부 확인 또는 편의 기능 제공
                     let clickAction = (isOut && data.status !== '반납됨') ? `onclick="processReturn('${docId}', '${data.partId}', ${data.quantity})"` : '';
                     let cursorStyle = (isOut && data.status !== '반납됨') ? 'cursor-pointer hover:border-green-300' : '';
 
