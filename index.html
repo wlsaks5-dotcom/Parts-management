@@ -25,10 +25,10 @@
     <!-- PC에서는 넓고 쾌적한 2단 카드형 레이아웃, 모바일은 1단 풀너비 레이아웃 -->
     <div class="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl shadow-xl p-6 md:p-8 mb-6">
         
-        <!-- 헤더 및 씨젠 로고 영역 -->
+        <!-- 헤더 및 씨젠 로고 영역 (영어 텍스트 삭제 및 정상 로고 적용) -->
         <div class="text-center mb-6 border-b border-gray-100 pb-4">
-            <div class="flex justify-center mb-3">
-                <img src="https://www.seegene.com/images/common/logo.png" alt="Seegene Logo" class="h-8 object-contain">
+            <div class="flex justify-center items-center mb-3 h-10">
+                <img src="https://www.seegene.com/images/common/logo.svg" alt="Seegene" class="h-7 object-contain" onerror="this.src='https://www.seegene.com/images/common/logo.png'">
             </div>
             <h1 class="text-xl md:text-2xl font-bold tracking-tight text-gray-900">부품 관리 시스템</h1>
         </div>
@@ -70,10 +70,10 @@
                     </button>
                 </div>
 
-                <!-- [PC/모바일 공용] 직접 입력 및 바코드 리더기 스캔 영역 -->
+                <!-- [공용] 직접 입력 및 바코드 리더기 스캔 영역 (문구 '직접 입력'으로 수정 완료) -->
                 <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-                    <label class="block text-xs font-bold text-blue-900 mb-1.5">💻 직접 입력 또는 바코드 리더기 스캔</label>
-                    <p class="text-[10px] text-gray-500 mb-2">* PC에서 USB/블루투스 리더기로 스캔 시 아래 칸에 자동 입력됩니다.</p>
+                    <label class="block text-xs font-bold text-blue-900 mb-1.5">직접 입력 (파트 넘버 / 부품 ID)</label>
+                    <p class="text-[10px] text-gray-500 mb-2">* 바코드 리더기 스캔 또는 키보드 직접 입력 후 엔터(Enter)</p>
                     <div class="flex gap-2">
                         <input type="text" id="manualPartInput" placeholder="파트 넘버 또는 부품 ID 입력/스캔" class="flex-1 text-xs p-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                         <button onclick="handleManualSubmit()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
@@ -82,7 +82,7 @@
                     </div>
                 </div>
 
-                <!-- 최근 처리 내역 (PC에서는 좌측 하단에 배치) -->
+                <!-- 최근 처리 내역 -->
                 <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <h2 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
                     <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-48 overflow-y-auto">
@@ -94,7 +94,7 @@
             <!-- 오른쪽 컬럼: 관리자 등록 패널 (비밀번호 1234 입력 시 활성화) -->
             <div>
                 <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full">
-                    <h2 class="text-xs font-bold text-purple-800 mb-3 uppercase tracking-wider">🛠️️ [관리자 모드] DB 정보 등록 패널</h2>
+                    <h2 class="text-xs font-bold text-purple-800 mb-3 uppercase tracking-wider">🛠 [관리자 모드] DB 정보 등록 패널</h2>
 
                     <!-- 탭 전환 버튼 -->
                     <div class="flex border-b border-purple-200 mb-4">
@@ -165,14 +165,13 @@
         const ADMIN_PASSWORD = "0304";
 
         let currentEngineer = localStorage.getItem('registered_engineer') || '';
-        let currentWorkMode = 'USE'; // 'USE'(출고), 'IN'(입고), 'ADMIN'(관리자 등록)
+        let currentWorkMode = 'USE'; 
         let html5QrCode = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             updateEngineerDisplay();
             loadRecentHistory();
 
-            // PC 바코드 리더기 지원: 입력창에서 엔터(Enter)를 치면 자동으로 처리 실행
             const manualInput = document.getElementById('manualPartInput');
             manualInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -215,7 +214,6 @@
             }
         }
 
-        // 모드 순환: 출고(USE) ➔ 입고(IN) ➔ 관리자등록(ADMIN) ➔ 출고(USE)
         function toggleWorkMode() {
             let pwd = prompt("관리자 비밀번호를 입력하세요:");
             if (pwd !== ADMIN_PASSWORD) {
@@ -375,7 +373,7 @@
 
             await handleScannedResult(partId);
             inputField.value = '';
-            inputField.focus(); // 바코드 연속 스캔을 위해 입력창에 다시 포커스 유지
+            inputField.focus();
         }
 
         async function handleScannedResult(partId) {
@@ -427,7 +425,7 @@
                             engineer: currentEngineer,
                             quantity: quantity,
                             type: "IN",
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            timestamp:에서 firebase.firestore.FieldValue.serverTimestamp(),
                             status: "입고완료"
                         });
 
