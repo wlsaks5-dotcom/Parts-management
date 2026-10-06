@@ -120,11 +120,14 @@
                         <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-1.5 text-xs font-bold text-gray-500">엔지니어 등록</button>
                     </div>
 
-                    <!-- 일괄 등록 실행 버튼 영역 (신품 + 테스트용 전체 데이터 반영) -->
-                    <div class="bg-white border border-purple-200 rounded-xl p-3 shadow-sm">
-                        <p class="text-[11px] text-gray-600 mb-2 font-medium">📋 신품 및 테스트용 전체 부품을 한 번에 등록합니다.</p>
-                        <button onclick="bulkRegisterParts()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
-                            🚀 전체 부품 일괄 등록 실행 (Batch)
+                    <!-- 일괄 등록 실행 버튼 영역 (분리형) -->
+                    <div class="bg-white border border-purple-200 rounded-xl p-3 shadow-sm space-y-2">
+                        <p class="text-[11px] text-gray-600 font-medium">📋 부품 종류별로 나누어 일괄 등록을 실행합니다.</p>
+                        <button onclick="bulkRegisterNewParts()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold shadow transition-all">
+                            🚀 New Part (신품) 일괄 등록
+                        </button>
+                        <button onclick="bulkRegisterTestParts()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-xs font-bold shadow transition-all">
+                            🚀 Test Part (테스트용) 일괄 등록
                         </button>
                     </div>
 
@@ -183,9 +186,8 @@
         let currentPartTab = 'new part';
         let html5QrCode = null;
 
-        // 전체 부품 데이터 통합 (이전 신품 목록 + 방금 보낸 테스트용 목록)
-        const photoPartsData = [
-            // --- 1. New Part (이전 신품 목록) ---
+        // 1. New Part 데이터 배열 분리
+        const newPartsData = [
             { partId: "183060", partName: "1ml O-Ring set of 8", stock: 20, type: "new part" },
             { partId: "183061-RNO", partName: "1ml Stop disks and Washer", stock: 18, type: "new part" },
             { partId: "62563-01S", partName: "PCB ASSY, SYSTEM CONTROLLER INTERFACE", stock: 3, type: "new part" },
@@ -237,14 +239,16 @@
             { partId: "S21-SG-HSB-A017", partName: "Seegene SAHS Service Toolkit", stock: 1, type: "new part" },
             { partId: "PCR-PLATES-96", partName: "Hard-Shell PCR Plates 96-well, thin well", stock: 3, type: "new part" },
             { partId: "CFX-OPTICAL-01", partName: "CFX Optical Module-IVD LCD Flex Adapter", stock: 1, type: "new part" },
-            { partId: "C1000-CTRL-PCBA", partName: "C1000 Thermal Cycler-IVD Controller PCBA", stock: 1, type: "new part" },
+            { partId: "C1000-CTRL-PCBA", partName: "C1000 Thermal Cycler-IVD Controller PCBA", stock: 1, type: "new part" }
+        ];
 
-            // --- 2. Test Part (방금 보낸 테스트용 목록) ---
+        // 2. Test Part 데이터 배열 분리 (슬래시나 특수문자 문서ID 오류 방지 보정)
+        const testPartsData = [
             { partId: "6605119-01", partName: "Autoload Y-drive", stock: 1, type: "test part" },
             { partId: "10013071", partName: "Shuttle Assy, CFX96-IVD", stock: 5, type: "test part" },
             { partId: "199034-RNO", partName: "HHS2,3mm,orbit,mtp flt bottom", stock: 1, type: "test part" },
             { partId: "94816-01", partName: "SRV REPL channel A w/o pipette", stock: 1, type: "test part" },
-            { partId: "TEST-182106", partName: "Pipetting head, 1000uL, Replacement", stock: 1, type: "test part" }, // 중복 ID 방지용 접두사 처리
+            { partId: "TEST-182106", partName: "Pipetting head, 1000uL, Replacement", stock: 1, type: "test part" },
             { partId: "TEST-10042144", partName: "PCBA,Main BD,C1000-IVD", stock: 1, type: "test part" },
             { partId: "182107-RNO", partName: "STAR autoloader, packaged", stock: 1, type: "test part" },
             { partId: "182136", partName: "Teaching needle", stock: 1, type: "test part" },
@@ -279,27 +283,49 @@
             });
         });
 
-        async function bulkRegisterParts() {
-            if (!confirm(`총 ${photoPartsData.length}개의 부품 데이터를 파이어베이스에 일괄 등록하시겠습니까?`)) return;
-
+        // 신품 일괄 등록 함수
+        async function bulkRegisterNewParts() {
+            if (!confirm(`New Part 총 ${newPartsData.length}개의 데이터를 등록하시겠습니까?`)) return;
             try {
                 const batch = db.batch();
-                photoPartsData.forEach((item) => {
+                newPartsData.forEach((item) => {
                     const docRef = db.collection("parts").doc(item.partId);
                     batch.set(docRef, {
                         partId: item.partId,
                         partName: item.partName,
                         stock: item.stock,
-                        type: item.type, // 'new part' 또는 'test part'
+                        type: item.type,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 });
-
                 await batch.commit();
-                alert("🎉 모든 부품 데이터가 파이어베이스에 성공적으로 일괄 등록되었습니다!");
+                alert("🎉 New Part 데이터가 성공적으로 등록되었습니다!");
             } catch (error) {
                 console.error(error);
-                alert("일괄 등록 중 오류가 발생했습니다.");
+                alert("등록 중 오류가 발생했습니다. 콘솔(F12)을 확인해주세요.");
+            }
+        }
+
+        // 테스트용 일괄 등록 함수
+        async function bulkRegisterTestParts() {
+            if (!confirm(`Test Part 총 ${testPartsData.length}개의 데이터를 등록하시겠습니까?`)) return;
+            try {
+                const batch = db.batch();
+                testPartsData.forEach((item) => {
+                    const docRef = db.collection("parts").doc(item.partId);
+                    batch.set(docRef, {
+                        partId: item.partId,
+                        partName: item.partName,
+                        stock: item.stock,
+                        type: item.type,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                await batch.commit();
+                alert("🎉 Test Part 데이터가 성공적으로 등록되었습니다!");
+            } catch (error) {
+                console.error(error);
+                alert("등록 중 오류가 발생했습니다. 콘솔(F12)을 확인해주세요.");
             }
         }
 
@@ -373,7 +399,7 @@
             if (pwd === ADMIN_PASSWORD) {
                 document.getElementById('loginModal').style.display = 'none';
                 currentWorkMode = 'ADMIN';
-                document.getElementById('workModeDisplay').innerText = "🛠️ [관리자 모드 - 정보 등록]";
+                document.getElementById('workModeDisplay').innerText = "🛠️️ [관리자 모드 - 정보 등록]";
                 document.getElementById('workModeDisplay').className = "font-bold text-sm md:text-base text-purple-600";
                 document.getElementById('adminModeSection').style.display = 'block';
                 document.getElementById('adminGuideBox').style.display = 'none';
