@@ -22,7 +22,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-4 md:p-8 flex flex-col items-center text-gray-800">
 
-    <!-- 엔지니어 선택 모달 오버레이 (최초 1회만 표시됨) -->
+    <!-- 엔지니어 선택 모달 오버레이 -->
     <div id="loginModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
             <h2 class="text-lg font-bold text-gray-900 mb-1">👤 엔지니어 선택</h2>
@@ -69,13 +69,13 @@
             </div>
         </div>
 
-        <!-- 파트 분류 탭 버튼 (신품 / 테스트용) -->
+        <!-- 파트 분류 탭 버튼 (new part / test part) -->
         <div class="flex border-b border-gray-200 mb-6">
-            <button onclick="switchPartTab('new')" id="tabNewParts" class="flex-1 py-3 text-xs md:text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all">
-                ✨ 신품 재고
+            <button onclick="switchPartTab('new part')" id="tabNewParts" class="flex-1 py-3 text-xs md:text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all">
+                ✨ New Part (신품)
             </button>
-            <button onclick="switchPartTab('used')" id="tabUsedParts" class="flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all">
-                🧪 테스트용 (중고) 파트
+            <button onclick="switchPartTab('test part')" id="tabUsedParts" class="flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all">
+                🧪 Test Part (테스트용)
             </button>
         </div>
 
@@ -112,46 +112,40 @@
 
             <div>
                 <!-- 관리자 정보 등록 패널 -->
-                <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full">
-                    <h2 class="text-xs font-bold text-purple-800 mb-3 uppercase tracking-wider">🛠 [관리자 모드] DB 정보 등록 패널</h2>
+                <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full space-y-4">
+                    <h2 class="text-xs font-bold text-purple-800 uppercase tracking-wider">🛠 [관리자 모드] DB 정보 등록 패널</h2>
 
-                    <div class="flex border-b border-purple-200 mb-4">
-                        <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700">부품 정보 등록</button>
-                        <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
+                    <div class="flex border-b border-purple-200 pb-1">
+                        <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-1.5 text-xs font-bold text-purple-700 border-b-2 border-purple-700">개별 부품 등록</button>
+                        <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-1.5 text-xs font-bold text-gray-500">엔지니어 등록</button>
                     </div>
 
-                    <div id="adminPartForm" class="space-y-3">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
-                            <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
-                            <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
-                        </div>
+                    <!-- 일괄 등록 실행 버튼 영역 (신품 + 테스트용 전체 데이터 반영) -->
+                    <div class="bg-white border border-purple-200 rounded-xl p-3 shadow-sm">
+                        <p class="text-[11px] text-gray-600 mb-2 font-medium">📋 신품 및 테스트용 전체 부품을 한 번에 등록합니다.</p>
+                        <button onclick="bulkRegisterParts()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
+                            🚀 전체 부품 일괄 등록 실행 (Batch)
+                        </button>
+                    </div>
+
+                    <div id="adminPartForm" class="space-y-2 pt-2 border-t border-purple-200">
+                        <p class="text-[11px] font-bold text-gray-700">개별 부품 추가</p>
+                        <input type="text" id="inputPartId" placeholder="파트 넘버 (예: 183060)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                        <input type="text" id="inputPartName" placeholder="부품 이름" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                         <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[11px] font-bold text-gray-700 mb-1">초기 수량</label>
-                                <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-bold text-gray-700 mb-1">부품 구분</label>
-                                <select id="inputPartType" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
-                                    <option value="new">신품</option>
-                                    <option value="used">테스트용(중고)</option>
-                                </select>
-                            </div>
+                            <input type="number" id="inputPartStock" value="0" placeholder="수량" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                            <select id="inputPartType" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                                <option value="new part">new part</option>
+                                <option value="test part">test part</option>
+                            </select>
                         </div>
-                        <button onclick="savePartToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
-                            💾 부품 정보 DB 등록
+                        <button onclick="savePartToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-xs font-bold shadow transition-all">
+                            💾 개별 부품 DB 등록
                         </button>
                     </div>
 
                     <div id="adminEngForm" class="space-y-3" style="display: none;">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-700 mb-1">엔지니어 성명 (신규 등록)</label>
-                            <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
-                        </div>
+                        <input type="text" id="inputEngName" placeholder="엔지니어 성명 (예: 박진만)" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800">
                         <button onclick="saveEngineerToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
                             💾 엔지니어 등록
                         </button>
@@ -160,7 +154,7 @@
 
                 <div id="adminGuideBox" class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center flex flex-col items-center justify-center h-full text-gray-400">
                     <span class="text-2xl mb-2">🔒</span>
-                    <p class="text-xs font-medium">관리자 모드로 전환하시면<br>이곳에 부품 및 엔지니어 등록 패널이 활성화됩니다.</p>
+                    <p class="text-xs font-medium">관리자 모드로 전환하시면<br>이곳에 일괄 등록 및 관리 패널이 활성화됩니다.</p>
                 </div>
             </div>
 
@@ -186,8 +180,94 @@
 
         let currentEngineer = localStorage.getItem('device_engineer') || '';
         let currentWorkMode = 'USE';
-        let currentPartTab = 'new'; // 기본값: 신품 탭
+        let currentPartTab = 'new part';
         let html5QrCode = null;
+
+        // 전체 부품 데이터 통합 (이전 신품 목록 + 방금 보낸 테스트용 목록)
+        const photoPartsData = [
+            // --- 1. New Part (이전 신품 목록) ---
+            { partId: "183060", partName: "1ml O-Ring set of 8", stock: 20, type: "new part" },
+            { partId: "183061-RNO", partName: "1ml Stop disks and Washer", stock: 18, type: "new part" },
+            { partId: "62563-01S", partName: "PCB ASSY, SYSTEM CONTROLLER INTERFACE", stock: 3, type: "new part" },
+            { partId: "182104-RNO", partName: "Replacement channel B", stock: 2, type: "new part" },
+            { partId: "182106", partName: "Pipetting head, 1000uL, Replacement", stock: 2, type: "new part" },
+            { partId: "173934/01", partName: "Carrier sensor board", stock: 1, type: "new part" },
+            { partId: "173446", partName: "Y-Spindle", stock: 2, type: "new part" },
+            { partId: "10076892", partName: "Power supply, STARline", stock: 1, type: "new part" },
+            { partId: "10008847-SVC", partName: "PAD,Insulator,Lid,Heater,CFX96", stock: 10, type: "new part" },
+            { partId: "6604355-01S", partName: "Motor,X-drv,Autoload,service", stock: 1, type: "new part" },
+            { partId: "189116", partName: "Reader checkplate", stock: 2, type: "new part" },
+            { partId: "10009418-SVC", partName: "I/O.Open/close switch main board cable", stock: 3, type: "new part" },
+            { partId: "55807-01", partName: "Timing Belt, Z axis, 4 Probe", stock: 1, type: "new part" },
+            { partId: "10013079", partName: "CFX96/CFX384 Front Lim sensor", stock: 1, type: "new part" },
+            { partId: "173293", partName: "Stop hook,Star", stock: 1, type: "new part" },
+            { partId: "258149-RNO", partName: "Belt, MXL", stock: 4, type: "new part" },
+            { partId: "173875", partName: "Sensor, HS H/V position sensor", stock: 3, type: "new part" },
+            { partId: "10013073", partName: "Lid heater", stock: 6, type: "new part" },
+            { partId: "62491-01", partName: "ProgPCB Door Lock", stock: 1, type: "new part" },
+            { partId: "10042147(10010779)", partName: "Alpha Interconnect PCBA", stock: 2, type: "new part" },
+            { partId: "10042144", partName: "PCBA,Main BD,C1000-IVD", stock: 1, type: "new part" },
+            { partId: "10013066", partName: "Stage carrier assembly", stock: 3, type: "new part" },
+            { partId: "10013076", partName: "Hinge motor assy", stock: 9, type: "new part" },
+            { partId: "182103-RNO", partName: "Replacement channel A", stock: 2, type: "new part" },
+            { partId: "10042171", partName: "C1000-IVD front-end controller board (2nd)", stock: 1, type: "new part" },
+            { partId: "10012843", partName: "PCB, Main Board, CFX96-IVD", stock: 3, type: "new part" },
+            { partId: "S21-SG-HSB-KP01", partName: "Motor", stock: 1, type: "new part" },
+            { partId: "S21-SG-HSB-A007", partName: "Press Heat ASS'Y", stock: 1, type: "new part" },
+            { partId: "S21-SG-HSB-K002", partName: "Hand sponge tape", stock: 5, type: "new part" },
+            { partId: "10013072", partName: "FCC with Int, PCB Assembly", stock: 3, type: "new part" },
+            { partId: "10013082", partName: "Pinion front motor", stock: 3, type: "new part" },
+            { partId: "10013083", partName: "Gear Box, Lid Position, CFX96-IVD", stock: 2, type: "new part" },
+            { partId: "10013084", partName: "Pod Switch Assy, CFX96-IVD", stock: 1, type: "new part" },
+            { partId: "10042145", partName: "C1000-IVD 2nd Generation LCD flex cable", stock: 1, type: "new part" },
+            { partId: "10042146", partName: "PCBA, USB HUB C1000-IVD 2nd generation", stock: 1, type: "new part" },
+            { partId: "10042147", partName: "Alpha interconnect PCB, C1000-IVD 2nd generation", stock: 1, type: "new part" },
+            { partId: "10042149", partName: "C1000-IVD 2nd generation Front Usb board", stock: 1, type: "new part" },
+            { partId: "10009418", partName: "Harness, LID I/O, Open/Close Switch to main board cable", stock: 3, type: "new part" },
+            { partId: "10022795", partName: "C1000 Touch Thermal Cycler Harness assembly", stock: 1, type: "new part" },
+            { partId: "10010781", partName: "C1000 Thermal Cycler Controller PCB", stock: 1, type: "new part" },
+            { partId: "10047485", partName: "C1000 Touch Thermal Cycler Power supply", stock: 1, type: "new part" },
+            { partId: "10145244", partName: "autoload y-belt", stock: 2, type: "new part" },
+            { partId: "67062-01", partName: "teaching needle", stock: 1, type: "new part" },
+            { partId: "CPU-BOARD-01", partName: "CPU Board", stock: 2, type: "new part" },
+            { partId: "1814035", partName: "heat seal", stock: 3, type: "new part" },
+            { partId: "922119", partName: "Pierceable cap", stock: 300, type: "new part" },
+            { partId: "S21-SG-HSB-A016", partName: "Feeder sensor Jig ASSY", stock: 15, type: "new part" },
+            { partId: "WINDOW-LTSC-01", partName: "Window LTSC value MP", stock: 2, type: "new part" },
+            { partId: "S21-SG-HSB-A017", partName: "Seegene SAHS Service Toolkit", stock: 1, type: "new part" },
+            { partId: "PCR-PLATES-96", partName: "Hard-Shell PCR Plates 96-well, thin well", stock: 3, type: "new part" },
+            { partId: "CFX-OPTICAL-01", partName: "CFX Optical Module-IVD LCD Flex Adapter", stock: 1, type: "new part" },
+            { partId: "C1000-CTRL-PCBA", partName: "C1000 Thermal Cycler-IVD Controller PCBA", stock: 1, type: "new part" },
+
+            // --- 2. Test Part (방금 보낸 테스트용 목록) ---
+            { partId: "6605119-01", partName: "Autoload Y-drive", stock: 1, type: "test part" },
+            { partId: "10013071", partName: "Shuttle Assy, CFX96-IVD", stock: 5, type: "test part" },
+            { partId: "199034-RNO", partName: "HHS2,3mm,orbit,mtp flt bottom", stock: 1, type: "test part" },
+            { partId: "94816-01", partName: "SRV REPL channel A w/o pipette", stock: 1, type: "test part" },
+            { partId: "TEST-182106", partName: "Pipetting head, 1000uL, Replacement", stock: 1, type: "test part" }, // 중복 ID 방지용 접두사 처리
+            { partId: "TEST-10042144", partName: "PCBA,Main BD,C1000-IVD", stock: 1, type: "test part" },
+            { partId: "182107-RNO", partName: "STAR autoloader, packaged", stock: 1, type: "test part" },
+            { partId: "182136", partName: "Teaching needle", stock: 1, type: "test part" },
+            { partId: "MOTOR-CONV-GENDER", partName: "Motor driver conversion gender", stock: 3, type: "test part" },
+            { partId: "62563-01", partName: "Nimbus board", stock: 1, type: "test part" },
+            { partId: "10042150", partName: "CFX96 LCD Display", stock: 1, type: "test part" },
+            { partId: "TEST-S21-SG-HSB-A016", partName: "Feeder sensor Jig ASSY", stock: 4, type: "test part" },
+            { partId: "80003958", partName: "Power Adaptor", stock: 1, type: "test part" },
+            { partId: "TEST-10013084", partName: "Pod Switch Assy, CFX96-IVD", stock: 2, type: "test part" },
+            { partId: "64404-01", partName: "ASSY, DOOR LOCK SOLENOID, ENCL", stock: 1, type: "test part" },
+            { partId: "10015194", partName: "mainboard battery", stock: 1, type: "test part" },
+            { partId: "10013070", partName: "Reference spot", stock: 2, type: "test part" },
+            { partId: "10021963", partName: "Harness LED CFX96", stock: 1, type: "test part" },
+            { partId: "10013068", partName: "System assembly", stock: 1, type: "test part" },
+            { partId: "10013069", partName: "X-Y axis sensor", stock: 1, type: "test part" },
+            { partId: "10013079", partName: "Harness", stock: 1, type: "test part" },
+            { partId: "10022846-SVC", partName: "USB HUB to frontend", stock: 1, type: "test part" },
+            { partId: "10023769-SVC", partName: "USB to mainboard cable", stock: 1, type: "test part" },
+            { partId: "100107680", partName: "C1000 Keypad", stock: 1, type: "test part" },
+            { partId: "6600023-01", partName: "96Head position", stock: 1, type: "test part" },
+            { partId: "111302191", partName: "96Head adjustment tool", stock: 2, type: "test part" },
+            { partId: "TEST-READER-CHECK", partName: "Reader check plate", stock: 2, type: "test part" }
+        ];
 
         window.addEventListener('DOMContentLoaded', () => {
             checkDeviceAuthStatus();
@@ -199,12 +279,36 @@
             });
         });
 
+        async function bulkRegisterParts() {
+            if (!confirm(`총 ${photoPartsData.length}개의 부품 데이터를 파이어베이스에 일괄 등록하시겠습니까?`)) return;
+
+            try {
+                const batch = db.batch();
+                photoPartsData.forEach((item) => {
+                    const docRef = db.collection("parts").doc(item.partId);
+                    batch.set(docRef, {
+                        partId: item.partId,
+                        partName: item.partName,
+                        stock: item.stock,
+                        type: item.type, // 'new part' 또는 'test part'
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+                alert("🎉 모든 부품 데이터가 파이어베이스에 성공적으로 일괄 등록되었습니다!");
+            } catch (error) {
+                console.error(error);
+                alert("일괄 등록 중 오류가 발생했습니다.");
+            }
+        }
+
         function switchPartTab(tab) {
             currentPartTab = tab;
             const btnNew = document.getElementById('tabNewParts');
             const btnUsed = document.getElementById('tabUsedParts');
 
-            if (tab === 'new') {
+            if (tab === 'new part') {
                 btnNew.className = "flex-1 py-3 text-xs md:text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all";
                 btnUsed.className = "flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all";
             } else {
@@ -227,14 +331,12 @@
         async function loadEngineerListForSelection() {
             const listContainer = document.getElementById('engineerSelectList');
             listContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">목록 불러오는 중...</p>';
-
             try {
                 const snapshot = await db.collection("engineers").get();
                 if (snapshot.empty) {
-                    listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-2">등록된 엔지니어가 없습니다.<br>아래 관리자 모드를 눌러 엔지니어를 먼저 등록해주세요!</p>';
+                    listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-2">등록된 엔지니어가 없습니다.</p>';
                     return;
                 }
-
                 let html = "";
                 snapshot.forEach(doc => {
                     const data = doc.data();
@@ -245,7 +347,6 @@
                 });
                 listContainer.innerHTML = html;
             } catch (error) {
-                console.error(error);
                 listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-2">목록을 불러오지 못했습니다.</p>';
             }
         }
@@ -305,7 +406,7 @@
                     return;
                 }
                 currentWorkMode = 'ADMIN';
-                modeDisplay.innerText = "🛠️️ [관리자 모드 - 정보 등록]";
+                modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-purple-600";
                 adminSection.style.display = 'block';
                 adminGuideBox.style.display = 'none';
@@ -329,13 +430,13 @@
             if (type === 'part') {
                 partForm.style.display = 'block';
                 engForm.style.display = 'none';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
+                tabPartBtn.className = "flex-1 py-1.5 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
+                tabEngBtn.className = "flex-1 py-1.5 text-xs font-bold text-gray-500";
             } else {
                 partForm.style.display = 'none';
                 engForm.style.display = 'block';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
+                tabPartBtn.className = "flex-1 py-1.5 text-xs font-bold text-gray-500";
+                tabEngBtn.className = "flex-1 py-1.5 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
             }
         }
 
@@ -343,7 +444,7 @@
             const partId = document.getElementById('inputPartId').value.trim();
             const partName = document.getElementById('inputPartName').value.trim();
             const stock = parseInt(document.getElementById('inputPartStock').value) || 0;
-            const partType = document.getElementById('inputPartType').value; // 'new' 또는 'used'
+            const partType = document.getElementById('inputPartType').value;
 
             if (!partId || !partName) {
                 alert("파트 넘버와 부품 이름을 모두 입력해주세요.");
@@ -355,37 +456,33 @@
                     partId: partId,
                     partName: partName,
                     stock: stock,
-                    type: partType, // 신품/중고 구분 저장
+                    type: partType,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 부품 DB 등록 완료!\n- ID: ${partId}\n- 이름: ${partName}\n- 구분: ${partType === 'new' ? '신품' : '테스트용(중고)'}`);
+                alert(`✅ 부품 등록 완료!\n- ID: ${partId}\n- 이름: ${partName}`);
                 document.getElementById('inputPartId').value = '';
                 document.getElementById('inputPartName').value = '';
                 document.getElementById('inputPartStock').value = '0';
             } catch (error) {
-                console.error(error);
-                alert("부품 저장 중 오류가 발생했습니다.");
+                alert("저장 중 오류가 발생했습니다.");
             }
         }
 
         async function saveEngineerToFirebase() {
             const engName = document.getElementById('inputEngName').value.trim();
-
             if (!engName) {
                 alert("엔지니어 이름을 입력해주세요.");
                 return;
             }
-
             try {
                 await db.collection("engineers").add({
                     name: engName,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 엔지니어 등록 완료!\n- 성명: ${engName}`);
+                alert(`✅ 엔지니어 등록 완료: ${engName}`);
                 document.getElementById('inputEngName').value = '';
                 checkDeviceAuthStatus();
             } catch (error) {
-                console.error(error);
                 alert("저장 중 오류가 발생했습니다.");
             }
         }
@@ -395,10 +492,7 @@
             const stopBtn = document.getElementById('stopBtn');
             readerDiv.style.display = 'block';
             stopBtn.style.display = 'block';
-
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
 
             html5QrCode.start(
                 { facingMode: "environment" },
@@ -416,9 +510,7 @@
         }
 
         async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                await html5QrCode.stop();
-            }
+            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
             document.getElementById('reader').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'none';
         }
@@ -426,12 +518,7 @@
         async function handleManualSubmit() {
             const inputField = document.getElementById('manualPartInput');
             const partId = inputField.value.trim();
-
-            if (!partId) {
-                alert("파트 넘버(부품 ID)를 입력해주세요.");
-                return;
-            }
-
+            if (!partId) return;
             await handleScannedResult(partId);
             inputField.value = '';
             inputField.focus();
@@ -440,12 +527,10 @@
         async function handleScannedResult(partId) {
             try {
                 const partDoc = await db.collection("parts").doc(partId).get();
-                
                 if (!partDoc.exists) {
                     alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.`);
                     return;
                 }
-
                 const partData = partDoc.data();
                 const partName = partData.partName;
 
@@ -454,48 +539,27 @@
                         alert(`❌ [출고 불가] ${partName}의 재고가 0개입니다.`);
                         return;
                     }
-
-                    await db.collection("parts").doc(partId).update({
-                        stock: firebase.firestore.FieldValue.increment(-1)
-                    });
-
+                    await db.collection("parts").doc(partId).update({ stock: firebase.firestore.FieldValue.increment(-1) });
                     await db.collection("usage_history").add({
-                        partId: partId,
-                        partName: partName,
-                        engineer: currentEngineer || "알 수 없음",
-                        type: "USE",
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: "사용(출고)완료"
+                        partId: partId, partName: partName, engineer: currentEngineer || "알 수 없음",
+                        type: "USE", timestamp: firebase.firestore.FieldValue.serverTimestamp(), status: "사용(출고)완료"
                     });
-
-                    alert(`✅ [출고 완료]\n- 부품: ${partName}\n- 담당자: ${currentEngineer}\n- 남은 재고: ${partData.stock - 1}개`);
+                    alert(`✅ [출고 완료]\n- 부품: ${partName}\n- 남은 재고: ${partData.stock - 1}개`);
                     loadRecentHistory();
-
                 } else if (currentWorkMode === 'IN') {
-                    let qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName}\n추가할 입고 수량을 입력하세요:`, "1");
+                    let qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName}\n추가할 수량을 입력하세요:`, "1");
                     if (qtyInput && !isNaN(qtyInput)) {
                         let quantity = parseInt(qtyInput);
-
-                        await db.collection("parts").doc(partId).update({
-                            stock: firebase.firestore.FieldValue.increment(quantity)
-                        });
-
+                        await db.collection("parts").doc(partId).update({ stock: firebase.firestore.FieldValue.increment(quantity) });
                         await db.collection("usage_history").add({
-                            partId: partId,
-                            partName: partName,
-                            engineer: currentEngineer || "알 수 없음",
-                            quantity: quantity,
-                            type: "IN",
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                            status: "입고완료"
+                            partId: partId, partName: partName, engineer: currentEngineer || "알 수 없음",
+                            quantity: quantity, type: "IN", timestamp: firebase.firestore.FieldValue.serverTimestamp(), status: "입고완료"
                         });
-
-                        alert(`📦 [입고 완료]\n- 부품: ${partName}\n- 추가 수량: +${quantity}\n- 총 재고: ${partData.stock + quantity}개`);
+                        alert(`📦 [입고 완료]\n- 부품: ${partName}\n- 추가 수량: +${quantity}`);
                         loadRecentHistory();
                     }
                 }
             } catch (error) {
-                console.error(error);
                 alert("처리 중 오류가 발생했습니다.");
             }
         }
@@ -503,26 +567,18 @@
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
-                const snapshot = await db.collection("usage_history")
-                    .orderBy("timestamp", "desc")
-                    .limit(5)
-                    .get();
-
+                const snapshot = await db.collection("usage_history").orderBy("timestamp", "desc").limit(5).get();
                 if (snapshot.empty) {
                     logContainer.innerHTML = "기록된 내역이 없습니다.";
                     return;
                 }
-
                 let html = "";
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
                     const badgeColor = data.type === 'IN' ? 'text-green-600' : 'text-blue-600';
                     html += `<div class="py-1.5 border-b border-gray-100 flex justify-between items-center text-[11px]">
-                        <div>
-                            <span class="font-bold ${badgeColor}">[${data.status}]</span> 
-                            <span>${data.partName || data.partId} (${data.engineer})</span>
-                        </div>
+                        <div><span class="font-bold ${badgeColor}">[${data.status}]</span> <span>${data.partName || data.partId} (${data.engineer})</span></div>
                         <span class="text-gray-400">${date}</span>
                     </div>`;
                 });
