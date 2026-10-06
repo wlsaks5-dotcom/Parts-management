@@ -147,7 +147,7 @@
 
                 <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <h2 class="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">📋 실시간 출고/입고 및 수정 내역</h2>
-                    <p class="text-[10px] text-gray-400 mb-2">* 목록 항목을 터치(클릭)하면 곧바로 입고(반납) 처리가 가능합니다.</p>
+                    <p class="text-[10px] text-purple-600 font-medium mb-2">* 출고 내역 카드를 터치(클릭)하면 상세 이력 확인 및 입고(반납) 처리가 가능합니다.</p>
                     <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-56 overflow-y-auto">
                         데이터를 불러오는 중...
                     </div>
@@ -280,7 +280,7 @@
         </div>
     </div>
 
-    <!-- 🔍 부품별 상세 이력 모달 -->
+    <!-- 🔍 부품별 상세 이력 및 입고(반납) 처리 모달 -->
     <div id="partHistoryModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3">
@@ -290,7 +290,8 @@
             <div id="modalPartHistoryContent" class="overflow-y-auto space-y-2 flex-1 text-xs text-gray-600">
                 <p class="text-center text-gray-400 py-4">불러오는 중...</p>
             </div>
-            <div class="pt-2 border-t border-gray-100 text-right">
+            <div class="pt-2 border-t border-gray-100 flex justify-between items-center">
+                <p class="text-[11px] text-gray-400">* 출고 건 하단의 [입고 처리] 버튼을 누르면 반납이 진행됩니다.</p>
                 <button onclick="closePartHistoryModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold">닫기</button>
             </div>
         </div>
@@ -455,7 +456,7 @@
                 if (currentWorkMode === 'USE') {
                     await processCheckout();
                 } else if (currentWorkMode === 'IN') {
-                    await processDirectReturn(partId, partData.partName);
+                    await processDirectReturnInput();
                 }
             } catch (error) {
                 console.error(error);
@@ -578,18 +579,27 @@
             }
         }
 
-        // 📥 직접 입고 모드에서 부품 검색 후 입고 처리
-        async function processDirectReturn(partId, partName) {
-            const qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName}\n입고할 수량을 입력하세요:`, "1");
-            if (!qtyInput || isNaN(qtyInput)) return;
-            const qty = parseInt(qtyInput);
+        // 📥 입고 모드에서 직접 입고 처리
+        async function processDirectReturnInput() {
+            const partId = document.getElementById('selectedPartId').value;
+            const qty = parseInt(document.getElementById('outQuantity').value) || 1;
+
+            if (!partId) {
+                alert("검색 목록에서 입고할 부품을 선택해주세요.");
+                return;
+            }
 
             try {
                 const partRef = db.collection("parts").doc(partId);
-                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
-
                 const partDoc = await partRef.get();
+
+                if (!partDoc.exists) {
+                    alert("존재하지 않는 부품입니다.");
+                    return;
+                }
+
                 const partData = partDoc.data();
+                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
 
                 await db.collection("usage_history").add({
                     partId: partId,
@@ -606,6 +616,8 @@
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 document.getElementById('selectedPartTypeDisplay').value = '';
+                document.getElementById('outQuantity').value = '1';
+
                 loadRecentHistory();
             } catch (error) {
                 console.error(error);
@@ -613,16 +625,16 @@
             }
         }
 
-        // 📦 이력 목록에서 반납 처리
+        // 📦 이력 목록에서 곧바로 입고(반납) 처리
         async function processReturn(historyId, partId, qty) {
             if (!confirm("이 출고 건을 입고(반납) 처리하시겠습니까?")) return;
 
             try {
                 const partRef = db.collection("parts").doc(partId);
-                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
-
                 const partDoc = await partRef.get();
-                const partData = partDoc.data();
+                const partData = partDoc.exists ? partDoc.data() : { partName: partId, type: "new part" };
+
+                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
 
                 await db.collection("usage_history").add({
                     partId: partId,
@@ -639,15 +651,21 @@
 
                 alert("📦 정상적으로 입고(반납)되었습니다.");
                 loadRecentHistory();
+                
+                // 모달이 열려있다면 상세 이력 새로고침
+                const modal = document.getElementById('partHistoryModal');
+                if (modal.style.display === 'flex') {
+                    openPartHistoryModal(partId, partData.partName);
+                }
             } catch (error) {
                 console.error(error);
                 alert("입고 처리 중 오류가 발생했습니다.");
             }
         }
 
-        // 🔍 부품 상세 이력 모달
+        // 🔍 출고 내역 카드 클릭 시 부품 상세 이력 및 입고(반납) 기능 포함 모달 열기
         async function openPartHistoryModal(partId, partName) {
-            document.getElementById('modalPartTitle').innerText = `📦 부품 상세 이력: ${partName} (${partId})`;
+            document.getElementById('modalPartTitle').innerText = `📦 부품 상세 이력 및 입고: ${partName} (${partId})`;
             const contentContainer = document.getElementById('modalPartHistoryContent');
             contentContainer.innerHTML = '<p class="text-center text-gray-400 py-6">이력을 불러오는 중...</p>';
             document.getElementById('partHistoryModal').style.display = 'flex';
@@ -662,9 +680,17 @@
                 let html = "";
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    const docId = doc.id;
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : '방금 전';
                     const isOut = data.action === 'OUT';
                     const badgeColor = isOut ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
+
+                    let returnBtnHtml = '';
+                    if (isOut && data.status !== '반납됨') {
+                        returnBtnHtml = `<button onclick="processReturn('${docId}', '${partId}', ${data.quantity})" class="mt-2 w-full bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
+                            📦 이 건을 입고(반납) 처리하기 (${data.quantity}개)
+                        </button>`;
+                    }
 
                     html += `<div class="p-3 border border-gray-100 rounded-xl bg-gray-50 space-y-1">
                         <div class="flex justify-between items-center">
@@ -675,6 +701,7 @@
                             <span>담당 엔지니어: <strong>${data.engineer}</strong></span>
                             <span>수량: <strong>${data.quantity}개</strong></span>
                         </div>
+                        ${returnBtnHtml}
                     </div>`;
                 });
                 contentContainer.innerHTML = html;
@@ -900,7 +927,6 @@
                 document.getElementById('workModeDisplay').innerText = "🛠 [관리자 모드 - 정보 등록]";
                 document.getElementById('workModeDisplay').className = "font-bold text-sm md:text-base text-purple-600";
                 
-                // 패널 가시성 제어
                 document.getElementById('adminModeSection').style.display = 'block';
                 document.getElementById('adminGuideBox').style.display = 'none';
                 document.getElementById('adminPartsListSection').style.display = 'block';
@@ -918,7 +944,7 @@
             }
         }
 
-        // 🔄 모드 변경 순서: 출고(USE) -> 입고(IN) (비밀번호 없음, 한 번 클릭으로 즉시 전환) -> 관리자 모드(ADMIN) (비밀번호 필요) -> 출고(USE)
+        // 🔄 모드 변경 순서: 출고(USE) -> 입고(IN) -> 관리자 모드(ADMIN) -> 출고(USE)
         function toggleWorkMode() {
             const modeDisplay = document.getElementById('workModeDisplay');
             const adminSection = document.getElementById('adminModeSection');
@@ -929,7 +955,6 @@
             const actionProcessBtn = document.getElementById('actionProcessBtn');
 
             if (currentWorkMode === 'USE') {
-                // 1단계: 출고 모드 -> 입고 모드 (비밀번호 없이 즉시 전환)
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-green-600";
@@ -946,7 +971,6 @@
 
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
-                // 2단계: 입고 모드 -> 관리자 모드 (비밀번호 필요)
                 let pwd = prompt("관리자 비밀번호를 입력하세요:", "");
                 if (pwd !== ADMIN_PASSWORD) {
                     if (pwd !== null) alert("비밀번호가 틀렸습니다. 출고 모드로 돌아갑니다.");
@@ -977,7 +1001,6 @@
                 loadRegisteredPartsList();
                 alert("관리자 등록 모드로 전환되었습니다.");
             } else {
-                // 3단계: 관리자 모드 -> 출고 모드
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
@@ -992,48 +1015,6 @@
                 actionProcessBtn.setAttribute("onclick", "processCheckout()");
 
                 alert("사용(출고) 모드로 전환되었습니다.");
-            }
-        }
-
-        // 입고 모드에서 버튼 클릭 시 실행할 직접 입고 함수
-        async function processDirectReturnInput() {
-            const partId = document.getElementById('selectedPartId').value;
-            const partName = document.getElementById('manualPartInput').value;
-            const qty = parseInt(document.getElementById('outQuantity').value) || 1;
-
-            if (!partId) {
-                alert("검색 목록에서 입고할 부품을 선택해주세요.");
-                return;
-            }
-
-            try {
-                const partRef = db.collection("parts").doc(partId);
-                await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
-
-                const partDoc = await partRef.get();
-                const partData = partDoc.data();
-
-                await db.collection("usage_history").add({
-                    partId: partId,
-                    partName: partData.partName,
-                    partType: partData.type,
-                    engineer: currentEngineer,
-                    quantity: qty,
-                    action: "IN",
-                    status: "입고완료",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                alert(`📦 [입고 완료]\n- 부품: ${partData.partName}\n- 입고 수량: +${qty}개`);
-                document.getElementById('manualPartInput').value = '';
-                document.getElementById('selectedPartId').value = '';
-                document.getElementById('selectedPartTypeDisplay').value = '';
-                document.getElementById('outQuantity').value = '1';
-
-                loadRecentHistory();
-            } catch (error) {
-                console.error(error);
-                alert("입고 처리 중 오류가 발생했습니다.");
             }
         }
 
@@ -1104,6 +1085,7 @@
             }
         }
 
+        // 📋 최근 출고/입고 내역 렌더링 (카드 클릭 시 상세 이력 및 입고 처리 모달 오픈)
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
@@ -1129,10 +1111,9 @@
                         `;
                     }
 
-                    let clickAction = (isOut && data.status !== '반납됨') ? `onclick="processReturn('${docId}', '${data.partId}', ${data.quantity})"` : '';
-                    let cursorStyle = (isOut && data.status !== '반납됨') ? 'cursor-pointer hover:border-green-300' : '';
-
-                    html += `<div ${clickAction} class="p-2.5 border border-gray-100 rounded-xl bg-white shadow-sm space-y-1 transition-all ${cursorStyle}" title="${(isOut && data.status !== '반납됨') ? '클릭하면 입고(반납) 처리됩니다.' : ''}">
+                    const safeName = (data.partName || '').replace(/'/g, "\\'");
+                    
+                    html += `<div onclick="openPartHistoryModal('${data.partId}', '${safeName}')" class="p-2.5 border border-gray-100 rounded-xl bg-white shadow-sm space-y-1 transition-all cursor-pointer hover:border-purple-300 hover:bg-purple-50/20" title="클릭하면 해당 부품의 이력 및 입고 처리를 할 수 있습니다.">
                         <div class="flex justify-between items-center">
                             <div>
                                 <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeColor}">[${data.status || '완료'}]</span>
