@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode 라이브러리 -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Firebase SDK (v8) --> 
+    <!-- Firebase SDK (v8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
@@ -20,86 +20,79 @@
         }
     </style>
 </head>
-<body class="bg-black min-h-screen p-4 flex flex-col items-center text-gray-100">
+<body class="bg-gray-50 min-h-screen p-4 flex flex-col items-center text-gray-800">
 
-    <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 mb-6">
+    <div class="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-xl p-6 mb-6">
         
-        <!-- 헤더 및 씨젠 / 제조사 로고 뱃지 영역 -->
-        <div class="text-center mb-6 border-b border-zinc-800 pb-4">
-            <div class="inline-block bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-                Seegene FSE Solution
+        <!-- 헤더 및 씨젠 로고 영역 -->
+        <div class="text-center mb-6 border-b border-gray-100 pb-4">
+            <!-- 씨젠 공식 로고 이미지 -->
+            <div class="flex justify-center mb-3">
+                <img src="https://www.seegene.com/images/common/logo.png" alt="Seegene Logo" class="h-8 object-contain">
             </div>
-            <h1 class="text-2xl font-black tracking-tight text-white">📦 부품 관리 시스템</h1>
-            
-            <!-- 주요 제조사 뱃지 목록 -->
-            <div class="flex flex-wrap justify-center gap-1.5 mt-3">
-                <span class="text-[10px] bg-zinc-800 text-red-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">Seegene</span>
-                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Bio-Rad</span>
-                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Hamilton</span>
-                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Neon Tech</span>
-            </div>
+            <h1 class="text-xl font-bold tracking-tight text-gray-900">부품 관리 시스템</h1>
         </div>
 
         <!-- 1. 엔지니어 정보 표시 및 변경 -->
-        <div class="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mb-4">
-            <p class="text-[11px] text-zinc-400 font-medium">현재 등록된 사용자 (기기 소유자)</p>
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+            <p class="text-[11px] text-gray-500 font-medium">현재 등록된 사용자 (기기 소유자)</p>
             <div class="flex justify-between items-center mt-1">
-                <span id="engineerNameDisplay" class="font-bold text-lg text-red-500">미등록</span>
-                <button onclick="changeEngineer()" class="text-xs bg-zinc-700 hover:bg-zinc-600 text-white border border-zinc-600 px-3 py-1.5 rounded-lg font-bold transition-all">변경</button>
+                <span id="engineerNameDisplay" class="font-bold text-lg text-blue-600">미등록</span>
+                <button onclick="changeEngineer()" class="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm">변경</button>
             </div>
         </div>
 
         <!-- 2. 작업 모드 표시 및 모드 전환 (비밀번호: 1234) -->
-        <div class="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mb-6">
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-[11px] text-zinc-400 font-medium">현재 작업 모드</p>
-                    <span id="workModeDisplay" class="font-bold text-base text-red-400">📤 [사용 모드 - 부품 출고]</span>
+                    <p class="text-[11px] text-gray-500 font-medium">현재 작업 모드</p>
+                    <span id="workModeDisplay" class="font-bold text-base text-blue-600">📤 [사용 모드 - 부품 출고]</span>
                 </div>
-                <button onclick="toggleWorkMode()" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-lg transition-all">모드 변경</button>
+                <button onclick="toggleWorkMode()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition-all">모드 변경</button>
             </div>
         </div>
 
         <!-- ================= [일반 모드 영역] ================= -->
         <div id="userModeSection">
             <!-- QR 스캔 실행 버튼 -->
-            <button onclick="startQrScanner()" class="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black text-center text-lg mb-4 shadow-xl transition-all flex items-center justify-center gap-2">
+            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-4 shadow-lg transition-all flex items-center justify-center gap-2">
                 <span>📷</span> 부품 QR 스캔하기
             </button>
 
             <!-- 카메라 화면 출력 영역 -->
-            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 border border-zinc-700" style="display: none;"></div>
+            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 border border-gray-200" style="display: none;"></div>
 
-            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-red-400 border border-red-600/50 py-2.5 rounded-xl font-bold text-sm mb-6 transition-all" style="display: none;">
+            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2.5 rounded-xl font-bold text-sm mb-6 transition-all shadow-sm" style="display: none;">
                 ❌ 스캔 취소
             </button>
         </div>
 
         <!-- ================= [관리자 등록 패널 (초기 숨김)] ================= -->
-        <div id="adminModeSection" style="display: none;" class="bg-zinc-800 border border-red-600/50 rounded-xl p-4 mb-6">
-            <h2 class="text-xs font-black text-red-400 mb-3 uppercase tracking-wider">🛠️ [관리자 모드] 정보 등록 패널</h2>
+        <div id="adminModeSection" style="display: none;" class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <h2 class="text-xs font-bold text-blue-800 mb-3 uppercase tracking-wider">🛠️ [관리자 모드] 정보 등록 패널</h2>
 
             <!-- 탭 전환 버튼 -->
-            <div class="flex border-b border-zinc-700 mb-4">
-                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600">부품 정보 등록</button>
-                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-zinc-400">엔지니어 등록</button>
+            <div class="flex border-b border-blue-200 mb-4">
+                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600">부품 정보 등록</button>
+                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
             </div>
 
             <!-- 1) 부품 등록 폼 -->
             <div id="adminPartForm" class="space-y-3">
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">파트 넘버 (부품 ID / QR 값)</label>
-                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
+                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">부품 이름 (Name)</label>
-                    <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
+                    <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">초기 입고 수량</label>
-                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">초기 입고 수량</label>
+                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                 </div>
-                <button onclick="savePartToFirebase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
+                <button onclick="savePartToFirebase()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
                     💾 부품 정보 DB 등록
                 </button>
             </div>
@@ -107,23 +100,23 @@
             <!-- 2) 엔지니어 등록 폼 -->
             <div id="adminEngForm" class="space-y-3" style="display: none;">
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">엔지니어 성명</label>
-                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">엔지니어 성명</label>
+                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">소속 / 부서 / 담당 장비</label>
-                    <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">소속 / 부서 / 담당 장비</label>
+                    <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
                 </div>
-                <button onclick="saveEngineerToFirebase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
+                <button onclick="saveEngineerToFirebase()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
                     💾 엔지니어 정보 DB 등록
                 </button>
             </div>
         </div>
 
         <!-- 최근 처리 내역 -->
-        <div class="border-t border-zinc-800 pt-4">
-            <h2 class="text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
-            <div id="historyLog" class="text-xs text-zinc-300 space-y-1.5 bg-zinc-800/50 p-3 rounded-xl max-h-40 overflow-y-auto border border-zinc-800">
+        <div class="border-t border-gray-100 pt-4">
+            <h2 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
+            <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 bg-gray-50 p-3 rounded-xl max-h-40 overflow-y-auto border border-gray-200">
                 데이터를 불러오는 중...
             </div>
         </div>
@@ -206,21 +199,21 @@
             if (currentWorkMode === 'USE') {
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
-                modeDisplay.className = "font-bold text-base text-blue-400";
+                modeDisplay.className = "font-bold text-base text-green-600";
                 userSection.style.display = 'block';
                 adminSection.style.display = 'none';
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
                 currentWorkMode = 'ADMIN';
                 modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
-                modeDisplay.className = "font-bold text-base text-yellow-400";
+                modeDisplay.className = "font-bold text-base text-purple-600";
                 userSection.style.display = 'none';
                 adminSection.style.display = 'block';
                 alert("관리자 등록 모드로 전환되었습니다.");
             } else {
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
-                modeDisplay.className = "font-bold text-base text-red-400";
+                modeDisplay.className = "font-bold text-base text-blue-600";
                 userSection.style.display = 'block';
                 adminSection.style.display = 'none';
                 alert("다시 사용(출고) 모드로 전환되었습니다.");
@@ -237,13 +230,13 @@
             if (type === 'part') {
                 partForm.style.display = 'block';
                 engForm.style.display = 'none';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-zinc-400";
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
             } else {
                 partForm.style.display = 'none';
                 engForm.style.display = 'block';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-zinc-400";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600";
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600";
             }
         }
 
@@ -392,9 +385,9 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
-                    html += `<div class="py-1.5 border-b border-zinc-800 flex justify-between">
+                    html += `<div class="py-1.5 border-b border-gray-100 flex justify-between">
                         <span><b>[${data.engineer}]</b> ${data.partId}</span>
-                        <span class="text-zinc-500">${date}</span>
+                        <span class="text-gray-400">${date}</span>
                     </div>`;
                 });
                 logContainer.innerHTML = html;
