@@ -9,7 +9,7 @@
     <!-- html5-qrcode 라이브러리 -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <!-- Firebase SDK (v8) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script> 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <style>
@@ -26,7 +26,6 @@
         
         <!-- 헤더 및 씨젠 로고 영역 -->
         <div class="text-center mb-6 border-b border-gray-100 pb-4">
-            <!-- 씨젠 공식 로고 이미지 -->
             <div class="flex justify-center mb-3">
                 <img src="https://www.seegene.com/images/common/logo.png" alt="Seegene Logo" class="h-8 object-contain">
             </div>
@@ -53,22 +52,33 @@
             </div>
         </div>
 
-        <!-- ================= [일반 모드 영역] ================= -->
+        <!-- ================= [일반 모드 영역 (출고/입고 시 표시)] ================= -->
         <div id="userModeSection">
-            <!-- QR 스캔 실행 버튼 -->
-            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-4 shadow-lg transition-all flex items-center justify-center gap-2">
-                <span>📷</span> 부품 QR 스캔하기
+            <!-- 모바일용 QR 스캔 실행 버튼 -->
+            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-3 shadow-lg transition-all flex items-center justify-center gap-2">
+                <span>📷</span> 부품 QR 스캔하기 (모바일용)
             </button>
 
             <!-- 카메라 화면 출력 영역 -->
-            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 border border-gray-200" style="display: none;"></div>
+            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-3 border border-gray-200" style="display: none;"></div>
 
-            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2.5 rounded-xl font-bold text-sm mb-6 transition-all shadow-sm" style="display: none;">
+            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2.5 rounded-xl font-bold text-sm mb-4 transition-all shadow-sm" style="display: none;">
                 ❌ 스캔 취소
             </button>
+
+            <!-- PC 사용자용 직접 입력 영역 -->
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3.5 mb-4">
+                <label class="block text-[11px] font-bold text-gray-600 mb-1.5">💻 PC 직접 입력 (파트 넘버/부품 ID)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="manualPartInput" placeholder="예: PART-001 입력" class="flex-1 text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
+                    <button onclick="handleManualSubmit()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm">
+                        처리
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- ================= [관리자 등록 패널 (초기 숨김)] ================= -->
+        <!-- ================= [관리자 등록 패널 (비밀번호 1234 입력 시 활성화)] ================= -->
         <div id="adminModeSection" style="display: none;" class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
             <h2 class="text-xs font-bold text-blue-800 mb-3 uppercase tracking-wider">🛠️ [관리자 모드] 정보 등록 패널</h2>
 
@@ -123,7 +133,6 @@
     </div>
 
     <script>
-        // 파이어베이스 설정 (본인 정보 유지)
         const firebaseConfig = {
             apiKey: "본인의_API_KEY_입력",
             authDomain: "본인의_AUTH_DOMAIN_입력",
@@ -138,8 +147,7 @@
         }
         const db = firebase.firestore();
 
-        // 관리자 비밀번호
-        const ADMIN_PASSWORD = "0304";
+        const ADMIN_PASSWORD = "1234";
 
         let currentEngineer = localStorage.getItem('registered_engineer') || '';
         let currentWorkMode = 'USE'; // 'USE'(출고), 'IN'(입고), 'ADMIN'(관리자 등록)
@@ -184,7 +192,7 @@
             }
         }
 
-        // 모드 변경 (출고 ➔ 입고 ➔ 관리자 등록 순환)
+        // 모드 순환: 출고(USE) ➔ 입고(IN) ➔ 관리자등록(ADMIN) ➔ 출고(USE)
         function toggleWorkMode() {
             let pwd = prompt("관리자 비밀번호를 입력하세요:");
             if (pwd !== ADMIN_PASSWORD) {
@@ -209,7 +217,7 @@
                 modeDisplay.className = "font-bold text-base text-purple-600";
                 userSection.style.display = 'none';
                 adminSection.style.display = 'block';
-                alert("관리자 등록 모드로 전환되었습니다.");
+                alert("관리자 등록 모드로 전환되었습니다. 부품 및 엔지니어 등록 폼이 활성화되었습니다.");
             } else {
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
@@ -220,7 +228,6 @@
             }
         }
 
-        // 관리자 패널 내부 탭 전환
         function switchAdminTab(type) {
             const partForm = document.getElementById('adminPartForm');
             const engForm = document.getElementById('adminEngForm');
@@ -240,7 +247,6 @@
             }
         }
 
-        // 파이어베이스 부품 정보 저장
         async function savePartToFirebase() {
             const partId = document.getElementById('inputPartId').value.trim();
             const partName = document.getElementById('inputPartName').value.trim();
@@ -268,7 +274,6 @@
             }
         }
 
-        // 파이어베이스 엔지니어 정보 저장
         async function saveEngineerToFirebase() {
             const engName = document.getElementById('inputEngName').value.trim();
             const engDept = document.getElementById('inputEngDept').value.trim();
@@ -293,7 +298,6 @@
             }
         }
 
-        // QR 스캐너 로직
         function startQrScanner() {
             if (!currentEngineer) {
                 checkEngineerRegistration();
@@ -330,6 +334,25 @@
             }
             document.getElementById('reader').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'none';
+        }
+
+        // PC 직접 입력 처리 버튼 클릭 시
+        async function handleManualSubmit() {
+            if (!currentEngineer) {
+                checkEngineerRegistration();
+                if (!currentEngineer) return;
+            }
+
+            const inputField = document.getElementById('manualPartInput');
+            const partId = inputField.value.trim();
+
+            if (!partId) {
+                alert("파트 넘버(부품 ID)를 입력해주세요.");
+                return;
+            }
+
+            await handleScannedResult(partId);
+            inputField.value = ''; // 입력창 초기화
         }
 
         async function handleScannedResult(partId) {
