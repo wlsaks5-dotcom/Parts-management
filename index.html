@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Seegene Parts Management System</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,115 +20,130 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 flex flex-col items-center text-gray-800">
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 flex flex-col items-center text-gray-800">
 
-    <div class="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-xl p-6 mb-6">
+    <!-- PC에서는 넓고 쾌적한 2단 카드형 레이아웃, 모바일은 1단 풀너비 레이아웃 -->
+    <div class="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl shadow-xl p-6 md:p-8 mb-6">
         
         <!-- 헤더 및 씨젠 로고 영역 -->
         <div class="text-center mb-6 border-b border-gray-100 pb-4">
             <div class="flex justify-center mb-3">
                 <img src="https://www.seegene.com/images/common/logo.png" alt="Seegene Logo" class="h-8 object-contain">
             </div>
-            <h1 class="text-xl font-bold tracking-tight text-gray-900">부품 관리 시스템</h1>
+            <h1 class="text-xl md:text-2xl font-bold tracking-tight text-gray-900">부품 관리 시스템</h1>
         </div>
 
-        <!-- 1. 엔지니어 정보 표시 및 변경 -->
-        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
-            <p class="text-[11px] text-gray-500 font-medium">현재 등록된 사용자 (기기 소유자)</p>
-            <div class="flex justify-between items-center mt-1">
-                <span id="engineerNameDisplay" class="font-bold text-lg text-blue-600">미등록</span>
+        <!-- 상단 컨트롤 바 (사용자 정보 & 작업 모드) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <!-- 엔지니어 정보 -->
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-medium">현재 등록된 사용자 (소유자)</p>
+                    <span id="engineerNameDisplay" class="font-bold text-base md:text-lg text-blue-600">미등록</span>
+                </div>
                 <button onclick="changeEngineer()" class="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm">변경</button>
             </div>
-        </div>
 
-        <!-- 2. 작업 모드 표시 및 모드 전환 (비밀번호: 1234) -->
-        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
-            <div class="flex justify-between items-center">
+            <!-- 작업 모드 -->
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center">
                 <div>
                     <p class="text-[11px] text-gray-500 font-medium">현재 작업 모드</p>
-                    <span id="workModeDisplay" class="font-bold text-base text-blue-600">📤 [사용 모드 - 부품 출고]</span>
+                    <span id="workModeDisplay" class="font-bold text-sm md:text-base text-blue-600">📤 [사용 모드 - 부품 출고]</span>
                 </div>
                 <button onclick="toggleWorkMode()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition-all">모드 변경</button>
             </div>
         </div>
 
-        <!-- ================= [일반 모드 영역 (출고/입고 시 표시)] ================= -->
-        <div id="userModeSection">
-            <!-- 모바일용 QR 스캔 실행 버튼 -->
-            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-3 shadow-lg transition-all flex items-center justify-center gap-2">
-                <span>📷</span> 부품 QR 스캔하기 (모바일용)
-            </button>
-
-            <!-- 카메라 화면 출력 영역 -->
-            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-3 border border-gray-200" style="display: none;"></div>
-
-            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2.5 rounded-xl font-bold text-sm mb-4 transition-all shadow-sm" style="display: none;">
-                ❌ 스캔 취소
-            </button>
-
-            <!-- PC 사용자용 직접 입력 영역 -->
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3.5 mb-4">
-                <label class="block text-[11px] font-bold text-gray-600 mb-1.5">💻 PC 직접 입력 (파트 넘버/부품 ID)</label>
-                <div class="flex gap-2">
-                    <input type="text" id="manualPartInput" placeholder="예: PART-001 입력" class="flex-1 text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                    <button onclick="handleManualSubmit()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm">
-                        처리
+        <!-- 메인 콘텐츠 영역 (PC에서는 2단 분할, 모바일은 세로 배치) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- 왼쪽 컬럼: 스캔 및 입력 영역 -->
+            <div class="space-y-4">
+                <!-- [모바일 전용] QR 스캔 버튼 -->
+                <div class="md:hidden">
+                    <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-base shadow-lg transition-all flex items-center justify-center gap-2 mb-2">
+                        <span>📷</span> 부품 QR 스캔하기 (모바일 카메라)
+                    </button>
+                    <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-3 border border-gray-200" style="display: none;"></div>
+                    <button id="stopBtn" onclick="stopScanner()" class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2.5 rounded-xl font-bold text-sm mb-3 transition-all shadow-sm" style="display: none;">
+                        ❌ 스캔 취소
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- ================= [관리자 등록 패널 (비밀번호 1234 입력 시 활성화)] ================= -->
-        <div id="adminModeSection" style="display: none;" class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <h2 class="text-xs font-bold text-blue-800 mb-3 uppercase tracking-wider">🛠️ [관리자 모드] 정보 등록 패널</h2>
+                <!-- [PC/모바일 공용] 직접 입력 및 바코드 리더기 스캔 영역 -->
+                <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                    <label class="block text-xs font-bold text-blue-900 mb-1.5">💻 직접 입력 또는 바코드 리더기 스캔</label>
+                    <p class="text-[10px] text-gray-500 mb-2">* PC에서 USB/블루투스 리더기로 스캔 시 아래 칸에 자동 입력됩니다.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="manualPartInput" placeholder="파트 넘버 또는 부품 ID 입력/스캔" class="flex-1 text-xs p-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
+                        <button onclick="handleManualSubmit()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
+                            처리
+                        </button>
+                    </div>
+                </div>
 
-            <!-- 탭 전환 버튼 -->
-            <div class="flex border-b border-blue-200 mb-4">
-                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600">부품 정보 등록</button>
-                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
-            </div>
-
-            <!-- 1) 부품 등록 폼 -->
-            <div id="adminPartForm" class="space-y-3">
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
-                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
+                <!-- 최근 처리 내역 (PC에서는 좌측 하단에 배치) -->
+                <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <h2 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
+                    <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-48 overflow-y-auto">
+                        데이터를 불러오는 중...
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
-                    <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-700 mb-1">초기 입고 수량</label>
-                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                </div>
-                <button onclick="savePartToFirebase()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
-                    💾 부품 정보 DB 등록
-                </button>
             </div>
 
-            <!-- 2) 엔지니어 등록 폼 -->
-            <div id="adminEngForm" class="space-y-3" style="display: none;">
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-700 mb-1">엔지니어 성명</label>
-                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-700 mb-1">소속 / 부서 / 담당 장비</label>
-                    <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                </div>
-                <button onclick="saveEngineerToFirebase()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
-                    💾 엔지니어 정보 DB 등록
-                </button>
-            </div>
-        </div>
+            <!-- 오른쪽 컬럼: 관리자 등록 패널 (비밀번호 1234 입력 시 활성화) -->
+            <div>
+                <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full">
+                    <h2 class="text-xs font-bold text-purple-800 mb-3 uppercase tracking-wider">🛠️️ [관리자 모드] DB 정보 등록 패널</h2>
 
-        <!-- 최근 처리 내역 -->
-        <div class="border-t border-gray-100 pt-4">
-            <h2 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
-            <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 bg-gray-50 p-3 rounded-xl max-h-40 overflow-y-auto border border-gray-200">
-                데이터를 불러오는 중...
+                    <!-- 탭 전환 버튼 -->
+                    <div class="flex border-b border-purple-200 mb-4">
+                        <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700">부품 정보 등록</button>
+                        <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
+                    </div>
+
+                    <!-- 1) 부품 등록 폼 -->
+                    <div id="adminPartForm" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
+                            <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
+                            <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">초기 입고 수량</label>
+                            <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <button onclick="savePartToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
+                            💾 부품 정보 DB 등록
+                        </button>
+                    </div>
+
+                    <!-- 2) 엔지니어 등록 폼 -->
+                    <div id="adminEngForm" class="space-y-3" style="display: none;">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">엔지니어 성명</label>
+                            <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">소속 / 부서 / 담당 장비</label>
+                            <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <button onclick="saveEngineerToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
+                            💾 엔지니어 정보 DB 등록
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 관리자 모드가 아닐 때 PC 우측에 보이는 안내 박스 -->
+                <div id="adminGuideBox" class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center flex flex-col items-center justify-center h-full text-gray-400">
+                    <span class="text-2xl mb-2">🔒</span>
+                    <p class="text-xs font-medium">관리자 모드로 전환하시면<br>이곳에 부품 및 엔지니어 등록 패널이 활성화됩니다.</p>
+                </div>
             </div>
+
         </div>
     </div>
 
@@ -156,6 +171,14 @@
         window.addEventListener('DOMContentLoaded', () => {
             updateEngineerDisplay();
             loadRecentHistory();
+
+            // PC 바코드 리더기 지원: 입력창에서 엔터(Enter)를 치면 자동으로 처리 실행
+            const manualInput = document.getElementById('manualPartInput');
+            manualInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleManualSubmit();
+                }
+            });
         });
 
         function updateEngineerDisplay() {
@@ -201,29 +224,29 @@
             }
 
             const modeDisplay = document.getElementById('workModeDisplay');
-            const userSection = document.getElementById('userModeSection');
             const adminSection = document.getElementById('adminModeSection');
+            const adminGuideBox = document.getElementById('adminGuideBox');
 
             if (currentWorkMode === 'USE') {
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
-                modeDisplay.className = "font-bold text-base text-green-600";
-                userSection.style.display = 'block';
+                modeDisplay.className = "font-bold text-sm md:text-base text-green-600";
                 adminSection.style.display = 'none';
+                adminGuideBox.style.display = 'flex';
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
                 currentWorkMode = 'ADMIN';
                 modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
-                modeDisplay.className = "font-bold text-base text-purple-600";
-                userSection.style.display = 'none';
+                modeDisplay.className = "font-bold text-sm md:text-base text-purple-600";
                 adminSection.style.display = 'block';
-                alert("관리자 등록 모드로 전환되었습니다. 부품 및 엔지니어 등록 폼이 활성화되었습니다.");
+                adminGuideBox.style.display = 'none';
+                alert("관리자 등록 모드로 전환되었습니다.");
             } else {
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
-                modeDisplay.className = "font-bold text-base text-blue-600";
-                userSection.style.display = 'block';
+                modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
                 adminSection.style.display = 'none';
+                adminGuideBox.style.display = 'flex';
                 alert("다시 사용(출고) 모드로 전환되었습니다.");
             }
         }
@@ -237,13 +260,13 @@
             if (type === 'part') {
                 partForm.style.display = 'block';
                 engForm.style.display = 'none';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600";
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
                 tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
             } else {
                 partForm.style.display = 'none';
                 engForm.style.display = 'block';
                 tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700";
             }
         }
 
@@ -264,7 +287,7 @@
                     stock: stock,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 부품 등록 완료!\n- ID(QR): ${partId}\n- 이름: ${partName}\n- 수량: ${stock}`);
+                alert(`✅ 부품 DB 등록 완료!\n- ID: ${partId}\n- 이름: ${partName}\n- 수량: ${stock}`);
                 document.getElementById('inputPartId').value = '';
                 document.getElementById('inputPartName').value = '';
                 document.getElementById('inputPartStock').value = '0';
@@ -289,7 +312,7 @@
                     department: engDept,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 엔지니어 등록 완료!\n- 성명: ${engName}\n- 소속: ${engDept}`);
+                alert(`✅ 엔지니어 DB 등록 완료!\n- 성명: ${engName}\n- 소속: ${engDept}`);
                 document.getElementById('inputEngName').value = '';
                 document.getElementById('inputEngDept').value = '';
             } catch (error) {
@@ -336,7 +359,6 @@
             document.getElementById('stopBtn').style.display = 'none';
         }
 
-        // PC 직접 입력 처리 버튼 클릭 시
         async function handleManualSubmit() {
             if (!currentEngineer) {
                 checkEngineerRegistration();
@@ -352,42 +374,70 @@
             }
 
             await handleScannedResult(partId);
-            inputField.value = ''; // 입력창 초기화
+            inputField.value = '';
+            inputField.focus(); // 바코드 연속 스캔을 위해 입력창에 다시 포커스 유지
         }
 
         async function handleScannedResult(partId) {
-            if (currentWorkMode === 'USE') {
-                try {
+            try {
+                const partDoc = await db.collection("parts").doc(partId).get();
+                
+                if (!partDoc.exists) {
+                    alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.\n관리자 모드에서 부품을 먼저 등록해주세요.`);
+                    return;
+                }
+
+                const partData = partDoc.data();
+                const partName = partData.partName;
+
+                if (currentWorkMode === 'USE') {
+                    if (partData.stock <= 0) {
+                        alert(`❌ [출고 불가] ${partName} (${partId})의 현재 재고가 0개입니다.`);
+                        return;
+                    }
+
+                    await db.collection("parts").doc(partId).update({
+                        stock: firebase.firestore.FieldValue.increment(-1)
+                    });
+
                     await db.collection("usage_history").add({
                         partId: partId,
+                        partName: partName,
                         engineer: currentEngineer,
                         type: "USE",
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: "사용완료"
+                        status: "사용(출고)완료"
                     });
-                    alert(`✅ [사용 완료]\n엔지니어: ${currentEngineer}\n부품 ID: ${partId}`);
+
+                    alert(`✅ [출고 완료]\n- 부품: ${partName} (${partId})\n- 담당자: ${currentEngineer}\n- 남은 재고: ${partData.stock - 1}개`);
                     loadRecentHistory();
-                } catch (error) {
-                    alert("사용 데이터 전송 오류");
-                }
-            } else if (currentWorkMode === 'IN') {
-                let qtyInput = prompt(`📦 [입고 처리 - 부품 ID: ${partId}]\n입고 수량 입력:`, "1");
-                if (qtyInput && !isNaN(qtyInput)) {
-                    let quantity = parseInt(qtyInput);
-                    try {
-                        await db.collection("inventory_logs").add({
+
+                } else if (currentWorkMode === 'IN') {
+                    let qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName} (${partId})\n추가할 입고 수량을 입력하세요:`, "1");
+                    if (qtyInput && !isNaN(qtyInput)) {
+                        let quantity = parseInt(qtyInput);
+
+                        await db.collection("parts").doc(partId).update({
+                            stock: firebase.firestore.FieldValue.increment(quantity)
+                        });
+
+                        await db.collection("usage_history").add({
                             partId: partId,
+                            partName: partName,
                             engineer: currentEngineer,
                             quantity: quantity,
                             type: "IN",
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            status: "입고완료"
                         });
-                        alert(`📦 [입고 완료]\n부품 ID: ${partId}\n수량: +${quantity}`);
+
+                        alert(`📦 [입고 완료]\n- 부품: ${partName} (${partId})\n- 추가 수량: +${quantity}\n- 총 재고: ${partData.stock + quantity}개`);
                         loadRecentHistory();
-                    } catch (error) {
-                        alert("입고 데이터 전송 오류");
                     }
                 }
+            } catch (error) {
+                console.error(error);
+                alert("데이터 처리 중 오류가 발생했습니다.");
             }
         }
 
@@ -408,8 +458,12 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
-                    html += `<div class="py-1.5 border-b border-gray-100 flex justify-between">
-                        <span><b>[${data.engineer}]</b> ${data.partId}</span>
+                    const badgeColor = data.type === 'IN' ? 'text-green-600' : 'text-blue-600';
+                    html += `<div class="py-1.5 border-b border-gray-100 flex justify-between items-center text-[11px]">
+                        <div>
+                            <span class="font-bold ${badgeColor}">[${data.status}]</span> 
+                            <span>${data.partName || data.partId} (${data.engineer})</span>
+                        </div>
                         <span class="text-gray-400">${date}</span>
                     </div>`;
                 });
