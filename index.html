@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -22,42 +22,74 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-4 md:p-8 flex flex-col items-center text-gray-800">
 
-    <!-- PC 2단 / 모바일 1단 반응형 레이아웃 컨테이너 -->
+    <!-- 기기 인증 / 로그인 모달 오버레이 -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+            <h2 class="text-lg font-bold text-gray-900 mb-1">🔐 엔지니어 본인 인증</h2>
+            <p class="text-xs text-gray-500 mb-4">목록에서 본인 성명을 터치하여 선택해주세요.</p>
+            
+            <!-- 1) 최초 기기 등록 화면 (클릭형 리스트) -->
+            <div id="firstTimeRegSection" style="display: none;" class="space-y-3 text-left mb-2">
+                <p class="text-xs font-bold text-blue-600 bg-blue-50 p-2.5 rounded-lg">ℹ️ 이 기기를 사용할 본인 계정을 선택하세요.</p>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">등록된 엔지니어 선택</label>
+                    <div id="engineerSelectList" class="max-h-36 overflow-y-auto space-y-1.5 border border-gray-200 rounded-lg p-2 bg-gray-50">
+                        <p class="text-xs text-gray-400 text-center py-4">등록된 엔지니어를 불러오는 중...</p>
+                    </div>
+                </div>
+                <div id="selectedEngineerPreview" class="text-xs font-bold text-blue-600 py-1" style="display: none;">
+                    선택된 엔지니어: <span id="previewName" class="underline"></span>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">사용할 4자리 비밀번호 (PIN)</label>
+                    <input type="password" id="regPinInput" maxlength="4" placeholder="숫자 4자리" class="w-full text-xs p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <button onclick="registerDeviceUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold shadow transition-all">
+                    기기 등록 및 시작하기
+                </button>
+            </div>
+
+            <!-- 2) 일반 로그인 화면 (PIN 입력) -->
+            <div id="normalLoginSection" style="display: none;" class="space-y-3 text-left">
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">기기 소유자</label>
+                    <input type="text" id="loginNameDisplay" disabled class="w-full text-xs p-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 font-bold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">개인 비밀번호 (PIN 4자리)</label>
+                    <input type="password" id="loginPinInput" maxlength="4" placeholder="비밀번호 입력" class="w-full text-xs p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <button onclick="verifyDeviceLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold shadow transition-all">
+                    로그인
+                </button>
+                <button onclick="resetDeviceBinding()" class="w-full text-gray-400 hover:text-red-500 text-[11px] pt-2 text-center transition-all">
+                    ⚠️ 기기 소유자 강제 초기화 (관리자 전용)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
     <div class="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl shadow-xl p-6 md:p-8 mb-6">
         
-        <!-- 헤더 및 씨젠 정식 로고 영역 -->
         <div class="text-center mb-6 border-b border-gray-100 pb-4">
-            <div class="flex justify-center items-center mb-3 h-10">
-                <!-- 제공해주신 씨젠 공식 로고 (SVG 벡터 최적화 적용으로 로딩 지연/버퍼링 원천 차단) -->
-                <svg class="h-8 w-auto" viewBox="0 0 680 145" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- 심볼 (원형 안의 DNA 아이콘) -->
-                    <circle cx="72.5" cy="72.5" r="59.5" stroke="black" stroke-width="26"/>
-                    <path d="M42 90C48.5 90 54 84.5 59.5 78.5C67 70 74.5 61.5 83 55C89 50.5 95.5 48 103 52.5C108 55.5 109.5 61.5 107 67C105 71.5 101 74.5 97 77.5C88.5 83.5 80 90 71.5 96.5C65 101.5 58.5 103.5 50.5 99.5C45.5 97 43 93.5 42 90Z" fill="#E31B23"/>
-                    <!-- 텍스트 (Seegene) -->
-                    <path d="M190.2 64.7H204.6V76.5C208.6 69.7 215.8 63.8 225.8 63.8C241.4 63.8 251 74.6 251 92.6V123.5H236.6V94.3C236.6 83.1 230.2 76.3 220.2 76.3C211 76.3 204.6 83.1 204.6 94.3V123.5H190.2V64.7Z" fill="black"/>
-                    <path d="M280.6 63.8C296.2 63.8 307.4 75.4 307.4 94.1C307.4 112.8 296.2 124.4 280.6 124.4C265 124.4 253.8 112.8 253.8 94.1C253.8 75.4 265 63.8 280.6 63.8ZM280.6 111.9C289.4 111.9 293.4 105.1 293.4 94.1C293.4 83.1 289.4 76.3 280.6 76.3C271.8 76.3 267.8 83.1 267.8 94.1C267.8 105.1 271.8 111.9 280.6 111.9Z" fill="black"/>
-                    <path d="M352.2 63.8C367.8 63.8 379 75.4 379 94.1C379 112.8 367.8 124.4 352.2 124.4C336.6 124.4 325.4 112.8 325.4 94.1C325.4 75.4 336.6 63.8 352.2 63.8ZM352.2 111.9C361 111.9 365 105.1 365 94.1C365 83.1 361 76.3 352.2 76.3C343.4 76.3 339.4 83.1 339.4 94.1C339.4 105.1 343.4 111.9 352.2 111.9Z" fill="black"/>
-                    <path d="M421.8 63.8C432.2 63.8 440.6 67.8 445.8 74.6V64.7H459.8V123.5H445.8V112.7C440.6 119.5 432.2 123.5 421.8 123.5C401.4 123.5 388.2 108.7 388.2 93.7C388.2 78.7 401.4 63.8 421.8 63.8ZM425.4 111.5C437 111.5 445.4 103.5 445.4 93.7C445.4 83.9 437 75.9 425.4 75.9C413.8 75.9 405.4 83.9 405.4 93.7C405.4 103.5 413.8 111.5 425.4 111.5Z" fill="black"/>
-                    <path d="M495.4 63.8C511 63.8 521.8 74.6 521.8 90.3V96.3H491.4V98.3C491.4 107.5 497.8 112.3 506.6 112.3C513.8 112.3 518.2 109.1 520.6 104.7H533.8C530.6 114.7 520.6 124.4 506.6 124.4C489 124.4 477.4 112.8 477.4 94.1C477.4 75.4 489 63.8 495.4 63.8ZM507.8 75.9C499.8 75.9 493.4 80.3 492.2 88.3H520.6V87.5C520.6 80.7 515 75.9 507.8 75.9Z" fill="black"/>
-                    <path d="M547.4 64.7H561.4V75.5C566.2 68.3 573.4 63.8 582.6 63.8C585.8 63.8 588.6 64.3 591 65.1V78.7C588.2 77.5 585 76.7 581.4 76.7C571.4 76.7 561.4 83.9 561.4 97.9V123.5H547.4V64.7Z" fill="black"/>
-                    <path d="M605.8 63.8C616.2 63.8 624.6 67.8 629.8 74.6V64.7H643.8V123.5H629.8V112.7C624.6 119.5 616.2 123.5 605.8 123.5C585.4 123.5 572.2 108.7 572.2 93.7C572.2 78.7 585.4 63.8 605.8 63.8ZM609.4 111.5C621 111.5 629.4 103.5 629.4 93.7C629.4 83.9 621 75.9 609.4 75.9C597.8 75.9 589.4 83.9 589.4 93.7C589.4 103.5 597.8 111.5 609.4 111.5Z" fill="black"/>
+            <div class="flex justify-center items-center mb-3 h-8">
+                <svg class="h-7 w-auto" viewBox="0 0 115 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18.8 6.4C17.6 5.4 15.9 4.8 13.9 4.8C9.5 4.8 6.5 7.8 6.5 12C6.5 16.2 9.5 19.2 13.9 19.2C16 19.2 17.6 18.6 18.8 17.6V14.5H13.9V11.2H22.1V19.8C20.3 21.6 17.4 22.8 13.9 22.8C7.5 22.8 2.5 18 2.5 12C2.5 6 7.5 1.2 13.9 1.2C17.7 1.2 20.7 2.7 22.5 5.1L18.8 6.4ZM32.4 1.5H36.4V22.5H32.4V1.5ZM47.2 1.5H51.2V9.8H61.2V1.5H65.2V22.5H61.2V13.2H51.2V22.5H47.2V1.5ZM75.8 1.5H79.8V19.2H92.2V22.5H75.8V1.5ZM101.8 1.5H105.8V19.2H118.2V22.5H101.8V1.5Z" fill="#003560"/>
                 </svg>
             </div>
             <h1 class="text-xl md:text-2xl font-bold tracking-tight text-gray-900">부품 관리 시스템</h1>
         </div>
 
-        <!-- 상단 컨트롤 바 (사용자 정보 & 작업 모드) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <!-- 엔지니어 정보 -->
             <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center">
                 <div>
-                    <p class="text-[11px] text-gray-500 font-medium">현재 등록된 사용자 (소유자)</p>
-                    <span id="engineerNameDisplay" class="font-bold text-base md:text-lg text-blue-600">미등록</span>
+                    <p class="text-[11px] text-gray-500 font-medium">현재 인증된 사용자 (소유자)</p>
+                    <span id="engineerNameDisplay" class="font-bold text-base md:text-lg text-blue-600">인증 대기중</span>
                 </div>
-                <button onclick="changeEngineer()" class="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm">변경</button>
+                <button onclick="lockDeviceSession()" class="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm">화면 잠금</button>
             </div>
 
-            <!-- 작업 모드 -->
             <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center">
                 <div>
                     <p class="text-[11px] text-gray-500 font-medium">현재 작업 모드</p>
@@ -67,12 +99,8 @@
             </div>
         </div>
 
-        <!-- 메인 콘텐츠 영역 (PC 2단 분할, 모바일 세로 배치) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            <!-- 왼쪽 컬럼: 스캔 및 입력 영역 -->
             <div class="space-y-4">
-                <!-- [모바일 전용] QR 스캔 버튼 -->
                 <div class="md:hidden">
                     <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-base shadow-lg transition-all flex items-center justify-center gap-2 mb-2">
                         <span>📷</span> 부품 QR 스캔하기 (모바일 카메라)
@@ -83,7 +111,6 @@
                     </button>
                 </div>
 
-                <!-- [공용] 직접 입력 및 바코드 리더기 스캔 영역 -->
                 <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
                     <label class="block text-xs font-bold text-blue-900 mb-1.5">직접 입력 (파트 넘버 / 부품 ID)</label>
                     <p class="text-[10px] text-gray-500 mb-2">* 바코드 리더기 스캔 또는 키보드 직접 입력 후 엔터(Enter)</p>
@@ -95,7 +122,6 @@
                     </div>
                 </div>
 
-                <!-- 최근 처리 내역 -->
                 <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <h2 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
                     <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-48 overflow-y-auto">
@@ -104,18 +130,15 @@
                 </div>
             </div>
 
-            <!-- 오른쪽 컬럼: 관리자 등록 패널 (비밀번호 1234 입력 시 활성화) -->
             <div>
                 <div id="adminModeSection" style="display: none;" class="bg-purple-50 border border-purple-200 rounded-xl p-5 h-full">
                     <h2 class="text-xs font-bold text-purple-800 mb-3 uppercase tracking-wider">🛠 [관리자 모드] DB 정보 등록 패널</h2>
 
-                    <!-- 탭 전환 버튼 -->
                     <div class="flex border-b border-purple-200 mb-4">
                         <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-purple-700 border-b-2 border-purple-700">부품 정보 등록</button>
-                        <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
+                        <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어(PIN) 등록</button>
                     </div>
 
-                    <!-- 1) 부품 등록 폼 -->
                     <div id="adminPartForm" class="space-y-3">
                         <div>
                             <label class="block text-[11px] font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
@@ -134,23 +157,21 @@
                         </button>
                     </div>
 
-                    <!-- 2) 엔지니어 등록 폼 -->
                     <div id="adminEngForm" class="space-y-3" style="display: none;">
                         <div>
                             <label class="block text-[11px] font-bold text-gray-700 mb-1">엔지니어 성명</label>
                             <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-700 mb-1">소속 / 부서 / 담당 장비</label>
-                            <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">개인 비밀번호 (PIN 숫자 4자리)</label>
+                            <input type="password" id="inputEngPin" maxlength="4" placeholder="예: 1234" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-purple-500">
                         </div>
                         <button onclick="saveEngineerToFirebase()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
-                            💾 엔지니어 정보 DB 등록
+                            💾 엔지니어 PIN 등록
                         </button>
                     </div>
                 </div>
 
-                <!-- 관리자 모드가 아닐 때 PC 우측에 보이는 안내 박스 -->
                 <div id="adminGuideBox" class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center flex flex-col items-center justify-center h-full text-gray-400">
                     <span class="text-2xl mb-2">🔒</span>
                     <p class="text-xs font-medium">관리자 모드로 전환하시면<br>이곳에 부품 및 엔지니어 등록 패널이 활성화됩니다.</p>
@@ -177,12 +198,13 @@
 
         const ADMIN_PASSWORD = "1234";
 
-        let currentEngineer = localStorage.getItem('registered_engineer') || '';
-        let currentWorkMode = 'USE'; 
+        let currentEngineer = localStorage.getItem('device_engineer') || '';
+        let selectedEngineerForReg = ''; // 최초 등록 시 클릭해서 선택한 이름
+        let currentWorkMode = 'USE';
         let html5QrCode = null;
 
         window.addEventListener('DOMContentLoaded', () => {
-            updateEngineerDisplay();
+            checkDeviceAuthStatus();
             loadRecentHistory();
 
             const manualInput = document.getElementById('manualPartInput');
@@ -191,51 +213,158 @@
                     handleManualSubmit();
                 }
             });
+
+            document.getElementById('loginPinInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') verifyDeviceLogin();
+            });
         });
 
-        function updateEngineerDisplay() {
-            const display = document.getElementById('engineerNameDisplay');
-            if (currentEngineer) {
-                display.innerText = currentEngineer;
-            } else {
-                display.innerText = "미등록 (설정 필요)";
-                setTimeout(() => {
-                    checkEngineerRegistration();
-                }, 300);
-            }
-        }
+        async function checkDeviceAuthStatus() {
+            const modal = document.getElementById('loginModal');
+            const firstReg = document.getElementById('firstTimeRegSection');
+            const normLog = document.getElementById('normalLoginSection');
 
-        function checkEngineerRegistration() {
             if (!currentEngineer) {
-                let name = prompt("사용 중인 엔지니어 성명을 입력하세요:");
-                if (name && name.trim() !== "") {
-                    currentEngineer = name.trim();
-                    localStorage.setItem('registered_engineer', currentEngineer);
-                    updateEngineerDisplay();
-                } else {
-                    alert("시스템을 이용하려면 사용자 등록이 필수입니다.");
-                    checkEngineerRegistration();
+                modal.style.display = 'flex';
+                firstReg.style.display = 'block';
+                normLog.style.display = 'none';
+                await loadEngineerListForSelection();
+            } else {
+                modal.style.display = 'flex';
+                firstReg.style.display = 'none';
+                normLog.style.display = 'block';
+                document.getElementById('loginNameDisplay').value = currentEngineer;
+                document.getElementById('loginPinInput').value = '';
+                document.getElementById('loginPinInput').focus();
+            }
+        }
+
+        // DB에 등록된 엔지니어 목록을 불러와서 클릭 가능한 버튼 형태로 표시
+        async function loadEngineerListForSelection() {
+            const listContainer = document.getElementById('engineerSelectList');
+            listContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">목록 불러오는 중...</p>';
+
+            try {
+                const snapshot = await db.collection("engineers").get();
+                if (snapshot.empty) {
+                    listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-2">등록된 엔지니어가 없습니다. 관리자에게 문의하세요.</p>';
+                    return;
                 }
+
+                let html = "";
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    html += `<button type="button" onclick="selectEngineer('${data.name}')" class="w-full text-left px-3 py-2 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-all flex justify-between items-center eng-btn" data-name="${data.name}">
+                        <span>👤 ${data.name}</span>
+                        <span class="text-[10px] text-gray-400">${data.department || ''}</span>
+                    </button>`;
+                });
+                listContainer.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+                listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-2">목록을 불러오지 못했습니다.</p>';
             }
         }
 
-        function changeEngineer() {
-            let name = prompt("변경할 엔지니어 성명을 입력하세요:", currentEngineer);
-            if (name && name.trim() !== "") {
-                currentEngineer = name.trim();
-                localStorage.setItem('registered_engineer', currentEngineer);
-                updateEngineerDisplay();
-                alert(`사용자가 [${currentEngineer}]님으로 변경되었습니다.`);
-            }
+        function selectEngineer(name) {
+            selectedEngineerForReg = name;
+            document.getElementById('selectedEngineerPreview').style.display = 'block';
+            document.getElementById('previewName').innerText = name;
+
+            // 선택한 버튼 강조 스타일 적용
+            document.querySelectorAll('.eng-btn').forEach(btn => {
+                if (btn.getAttribute('data-name') === name) {
+                    btn.className = "w-full text-left px-3 py-2 bg-blue-100 border-2 border-blue-500 rounded-lg text-xs font-bold text-blue-800 transition-all flex justify-between items-center eng-btn";
+                } else {
+                    btn.className = "w-full text-left px-3 py-2 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-all flex justify-between items-center eng-btn";
+                }
+            });
         }
 
-        function toggleWorkMode() {
-            let pwd = prompt("관리자 비밀번호를 입력하세요:");
-            if (pwd !== ADMIN_PASSWORD) {
-                alert("비밀번호가 틀렸습니다.");
+        async function registerDeviceUser() {
+            if (!selectedEngineerForReg) {
+                alert("목록에서 본인 성명을 터치하여 선택해주세요.");
                 return;
             }
 
+            const pin = document.getElementById('regPinInput').value.trim();
+            if (pin.length !== 4) {
+                alert("설정할 4자리 PIN 번호를 입력해주세요.");
+                return;
+            }
+
+            try {
+                // 선택한 엔지니어의 PIN 번호 저장
+                const querySnap = await db.collection("engineers").where("name", "==", selectedEngineerForReg).get();
+                if (!querySnap.empty) {
+                    const docId = querySnap.docs[0].id;
+                    const engData = querySnap.docs[0].data();
+
+                    if (engData.pin && engData.pin !== pin) {
+                        alert("이미 등록된 PIN 번호와 일치하지 않습니다. 올바른 PIN을 입력하세요.");
+                        return;
+                    } else if (!engData.pin) {
+                        await db.collection("engineers").doc(docId).update({ pin: pin });
+                    }
+                }
+
+                localStorage.setItem('device_engineer', selectedEngineerForReg);
+                currentEngineer = selectedEngineerForReg;
+                document.getElementById('loginModal').style.display = 'none';
+                updateEngineerDisplay();
+                alert(`✅ [${currentEngineer}]님으로 기기가 성공적으로 인증 및 등록되었습니다.`);
+            } catch (error) {
+                console.error(error);
+                alert("기기 등록 중 오류가 발생했습니다.");
+            }
+        }
+
+        async function verifyDeviceLogin() {
+            const pin = document.getElementById('loginPinInput').value.trim();
+            if (!pin) {
+                alert("PIN 번호를 입력해주세요.");
+                return;
+            }
+
+            try {
+                const querySnap = await db.collection("engineers").where("name", "==", currentEngineer).get();
+                if (!querySnap.empty) {
+                    const engData = querySnap.docs[0].data();
+                    if (engData.pin && engData.pin === pin) {
+                        document.getElementById('loginModal').style.display = 'none';
+                        updateEngineerDisplay();
+                        return;
+                    }
+                }
+                alert("❌ 비밀번호(PIN)가 틀렸습니다.");
+                document.getElementById('loginPinInput').value = '';
+            } catch (error) {
+                console.error(error);
+                alert("로그인 인증 중 오류 발생");
+            }
+        }
+
+        function lockDeviceSession() {
+            checkDeviceAuthStatus();
+        }
+
+        function resetDeviceBinding() {
+            let pwd = prompt("관리자 비밀번호를 입력하세요:");
+            if (pwd === ADMIN_PASSWORD) {
+                localStorage.removeItem('device_engineer');
+                currentEngineer = '';
+                alert("기기 소유자 연결이 해제되었습니다. 페이지를 새로고침합니다.");
+                location.reload();
+            } else {
+                alert("관리자 비밀번호가 틀렸습니다.");
+            }
+        }
+
+        function updateEngineerDisplay() {
+            document.getElementById('engineerNameDisplay').innerText = currentEngineer;
+        }
+
+        function toggleWorkMode() {
             const modeDisplay = document.getElementById('workModeDisplay');
             const adminSection = document.getElementById('adminModeSection');
             const adminGuideBox = document.getElementById('adminGuideBox');
@@ -248,8 +377,16 @@
                 adminGuideBox.style.display = 'flex';
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
+                let pwd = prompt("관리자 비밀번호를 입력하세요:");
+                if (pwd !== ADMIN_PASSWORD) {
+                    alert("비밀번호가 틀렸습니다. 출고 모드로 돌아갑니다.");
+                    currentWorkMode = 'USE';
+                    modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
+                    modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
+                    return;
+                }
                 currentWorkMode = 'ADMIN';
-                modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
+                modeDisplay.innerText = "🛠️️ [관리자 모드 - 정보 등록]";
                 modeDisplay.className = "font-bold text-sm md:text-base text-purple-600";
                 adminSection.style.display = 'block';
                 adminGuideBox.style.display = 'none';
@@ -260,7 +397,7 @@
                 modeDisplay.className = "font-bold text-sm md:text-base text-blue-600";
                 adminSection.style.display = 'none';
                 adminGuideBox.style.display = 'flex';
-                alert("다시 사용(출고) 모드로 전환되었습니다.");
+                alert("사용(출고) 모드로 전환되었습니다.");
             }
         }
 
@@ -300,7 +437,7 @@
                     stock: stock,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 부품 DB 등록 완료!\n- ID: ${partId}\n- 이름: ${partName}\n- 수량: ${stock}`);
+                alert(`✅ 부품 DB 등록 완료!\n- ID: ${partId}\n- 이름: ${partName}`);
                 document.getElementById('inputPartId').value = '';
                 document.getElementById('inputPartName').value = '';
                 document.getElementById('inputPartStock').value = '0';
@@ -312,34 +449,29 @@
 
         async function saveEngineerToFirebase() {
             const engName = document.getElementById('inputEngName').value.trim();
-            const engDept = document.getElementById('inputEngDept').value.trim();
+            const pin = document.getElementById('inputEngPin').value.trim();
 
-            if (!engName) {
-                alert("엔지니어 성명을 입력해주세요.");
+            if (!engName || pin.length !== 4) {
+                alert("엔지니어 이름과 4자리 PIN 번호를 입력해주세요.");
                 return;
             }
 
             try {
                 await db.collection("engineers").add({
                     name: engName,
-                    department: engDept,
+                    pin: pin,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ 엔지니어 DB 등록 완료!\n- 성명: ${engName}\n- 소속: ${engDept}`);
+                alert(`✅ 엔지니어 PIN 등록 완료!\n- 성명: ${engName}`);
                 document.getElementById('inputEngName').value = '';
-                document.getElementById('inputEngDept').value = '';
+                document.getElementById('inputEngPin').value = '';
             } catch (error) {
                 console.error(error);
-                alert("엔지니어 저장 중 오류가 발생했습니다.");
+                alert("저장 중 오류가 발생했습니다.");
             }
         }
 
         function startQrScanner() {
-            if (!currentEngineer) {
-                checkEngineerRegistration();
-                if (!currentEngineer) return;
-            }
-
             const readerDiv = document.getElementById('reader');
             const stopBtn = document.getElementById('stopBtn');
             readerDiv.style.display = 'block';
@@ -373,11 +505,6 @@
         }
 
         async function handleManualSubmit() {
-            if (!currentEngineer) {
-                checkEngineerRegistration();
-                if (!currentEngineer) return;
-            }
-
             const inputField = document.getElementById('manualPartInput');
             const partId = inputField.value.trim();
 
@@ -396,7 +523,7 @@
                 const partDoc = await db.collection("parts").doc(partId).get();
                 
                 if (!partDoc.exists) {
-                    alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.\n관리자 모드에서 부품을 먼저 등록해주세요.`);
+                    alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.`);
                     return;
                 }
 
@@ -405,7 +532,7 @@
 
                 if (currentWorkMode === 'USE') {
                     if (partData.stock <= 0) {
-                        alert(`❌ [출고 불가] ${partName} (${partId})의 현재 재고가 0개입니다.`);
+                        alert(`❌ [출고 불가] ${partName}의 재고가 0개입니다.`);
                         return;
                     }
 
@@ -422,11 +549,11 @@
                         status: "사용(출고)완료"
                     });
 
-                    alert(`✅ [출고 완료]\n- 부품: ${partName} (${partId})\n- 담당자: ${currentEngineer}\n- 남은 재고: ${partData.stock - 1}개`);
+                    alert(`✅ [출고 완료]\n- 부품: ${partName}\n- 담당자: ${currentEngineer}\n- 남은 재고: ${partData.stock - 1}개`);
                     loadRecentHistory();
 
                 } else if (currentWorkMode === 'IN') {
-                    let qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName} (${partId})\n추가할 입고 수량을 입력하세요:`, "1");
+                    let qtyInput = prompt(`📦 [입고 처리]\n- 부품: ${partName}\n추가할 입고 수량을 입력하세요:`, "1");
                     if (qtyInput && !isNaN(qtyInput)) {
                         let quantity = parseInt(qtyInput);
 
@@ -444,13 +571,13 @@
                             status: "입고완료"
                         });
 
-                        alert(`📦 [입고 완료]\n- 부품: ${partName} (${partId})\n- 추가 수량: +${quantity}\n- 총 재고: ${partData.stock + quantity}개`);
+                        alert(`📦 [입고 완료]\n- 부품: ${partName}\n- 추가 수량: +${quantity}\n- 총 재고: ${partData.stock + quantity}개`);
                         loadRecentHistory();
                     }
                 }
             } catch (error) {
                 console.error(error);
-                alert("데이터 처리 중 오류가 발생했습니다.");
+                alert("처리 중 오류가 발생했습니다.");
             }
         }
 
