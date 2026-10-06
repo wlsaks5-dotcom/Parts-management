@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>부품 관리 및 QR 스캐너 시스템</title>
+    <title>Seegene Parts Management System</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html5-qrcode 라이브러리 -->
@@ -20,71 +20,86 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+<body class="bg-black min-h-screen p-4 flex flex-col items-center text-gray-100">
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6 mb-6">
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">📦 부품 관리 시스템</h1>
+    <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 mb-6">
+        
+        <!-- 헤더 및 씨젠 / 제조사 로고 뱃지 영역 -->
+        <div class="text-center mb-6 border-b border-zinc-800 pb-4">
+            <div class="inline-block bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                Seegene FSE Solution
+            </div>
+            <h1 class="text-2xl font-black tracking-tight text-white">📦 부품 관리 시스템</h1>
+            
+            <!-- 주요 제조사 뱃지 목록 -->
+            <div class="flex flex-wrap justify-center gap-1.5 mt-3">
+                <span class="text-[10px] bg-zinc-800 text-red-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">Seegene</span>
+                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Bio-Rad</span>
+                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Hamilton</span>
+                <span class="text-[10px] bg-zinc-800 text-gray-300 border border-zinc-700 px-2 py-0.5 rounded font-bold">Neon Tech</span>
+            </div>
+        </div>
 
         <!-- 1. 엔지니어 정보 표시 및 변경 -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p class="text-xs text-gray-500">현재 등록된 사용자 (기기 소유자)</p>
+        <div class="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mb-4">
+            <p class="text-[11px] text-zinc-400 font-medium">현재 등록된 사용자 (기기 소유자)</p>
             <div class="flex justify-between items-center mt-1">
-                <span id="engineerNameDisplay" class="font-bold text-lg text-blue-700">미등록</span>
-                <button onclick="changeEngineer()" class="text-xs bg-white border border-gray-300 px-3 py-1.5 rounded shadow-sm">변경</button>
+                <span id="engineerNameDisplay" class="font-bold text-lg text-red-500">미등록</span>
+                <button onclick="changeEngineer()" class="text-xs bg-zinc-700 hover:bg-zinc-600 text-white border border-zinc-600 px-3 py-1.5 rounded-lg font-bold transition-all">변경</button>
             </div>
         </div>
 
         <!-- 2. 작업 모드 표시 및 모드 전환 (비밀번호: 1234) -->
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <div class="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-xs text-gray-500">현재 작업 모드</p>
-                    <span id="workModeDisplay" class="font-bold text-base text-green-700">📤 [사용 모드 - 부품 출고]</span>
+                    <p class="text-[11px] text-zinc-400 font-medium">현재 작업 모드</p>
+                    <span id="workModeDisplay" class="font-bold text-base text-red-400">📤 [사용 모드 - 부품 출고]</span>
                 </div>
-                <button onclick="toggleWorkMode()" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded shadow-sm">모드 변경</button>
+                <button onclick="toggleWorkMode()" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-lg transition-all">모드 변경</button>
             </div>
         </div>
 
         <!-- ================= [일반 모드 영역] ================= -->
         <div id="userModeSection">
             <!-- QR 스캔 실행 버튼 -->
-            <button onclick="startQrScanner()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-center text-lg mb-4 shadow-lg">
-                📷 부품 QR 스캔하기
+            <button onclick="startQrScanner()" class="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black text-center text-lg mb-4 shadow-xl transition-all flex items-center justify-center gap-2">
+                <span>📷</span> 부품 QR 스캔하기
             </button>
 
             <!-- 카메라 화면 출력 영역 -->
-            <div id="reader" class="rounded-lg overflow-hidden shadow-inner mb-4" style="display: none;"></div>
+            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 border border-zinc-700" style="display: none;"></div>
 
-            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-red-500 text-white py-2 rounded-lg font-bold text-sm mb-6" style="display: none;">
+            <button id="stopBtn" onclick="stopScanner()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-red-400 border border-red-600/50 py-2.5 rounded-xl font-bold text-sm mb-6 transition-all" style="display: none;">
                 ❌ 스캔 취소
             </button>
         </div>
 
         <!-- ================= [관리자 등록 패널 (초기 숨김)] ================= -->
-        <div id="adminModeSection" style="display: none;" class="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
-            <h2 class="text-sm font-bold text-yellow-800 mb-3">🛠️ [관리자 모드] 정보 등록 패널</h2>
+        <div id="adminModeSection" style="display: none;" class="bg-zinc-800 border border-red-600/50 rounded-xl p-4 mb-6">
+            <h2 class="text-xs font-black text-red-400 mb-3 uppercase tracking-wider">🛠️ [관리자 모드] 정보 등록 패널</h2>
 
             <!-- 탭 전환 버튼 -->
-            <div class="flex border-b border-yellow-200 mb-4">
-                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600">부품 정보 등록</button>
-                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-gray-500">엔지니어 등록</button>
+            <div class="flex border-b border-zinc-700 mb-4">
+                <button onclick="switchAdminTab('part')" id="tabPartBtn" class="flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600">부품 정보 등록</button>
+                <button onclick="switchAdminTab('engineer')" id="tabEngBtn" class="flex-1 py-2 text-xs font-bold text-zinc-400">엔지니어 등록</button>
             </div>
 
             <!-- 1) 부품 등록 폼 -->
             <div id="adminPartForm" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">파트 넘버 (부품 ID / QR 값)</label>
-                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2 border rounded">
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">파트 넘버 (부품 ID / QR 값)</label>
+                    <input type="text" id="inputPartId" placeholder="예: PART-001" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">부품 이름 (Name)</label>
-                    <input type="text" id="inputPartName" placeholder="예: 모터 드라이버" class="w-full text-xs p-2 border rounded">
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">부품 이름 (Name)</label>
+                    <input type="text" id="inputPartName" placeholder="예: STARlet Pipette Tip" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">초기 입고 수량</label>
-                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2 border rounded">
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">초기 입고 수량</label>
+                    <input type="number" id="inputPartStock" value="0" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
                 </div>
-                <button onclick="savePartToFirebase()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded text-xs font-bold shadow">
+                <button onclick="savePartToFirebase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
                     💾 부품 정보 DB 등록
                 </button>
             </div>
@@ -92,23 +107,23 @@
             <!-- 2) 엔지니어 등록 폼 -->
             <div id="adminEngForm" class="space-y-3" style="display: none;">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">엔지니어 성명</label>
-                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2 border rounded">
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">엔지니어 성명</label>
+                    <input type="text" id="inputEngName" placeholder="예: 박진만" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">소속 / 부서 / 직급</label>
-                    <input type="text" id="inputEngDept" placeholder="예: 기술지원팀 / FSE" class="w-full text-xs p-2 border rounded">
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">소속 / 부서 / 담당 장비</label>
+                    <input type="text" id="inputEngDept" placeholder="예: FSE / CFX96, STARlet" class="w-full text-xs p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-red-600">
                 </div>
-                <button onclick="saveEngineerToFirebase()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded text-xs font-bold shadow">
+                <button onclick="saveEngineerToFirebase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-xs font-bold shadow transition-all">
                     💾 엔지니어 정보 DB 등록
                 </button>
             </div>
         </div>
 
         <!-- 최근 처리 내역 -->
-        <div class="border-t pt-4">
-            <h2 class="text-sm font-bold text-gray-700 mb-2">📋 최근 처리 내역</h2>
-            <div id="historyLog" class="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-lg max-h-40 overflow-y-auto">
+        <div class="border-t border-zinc-800 pt-4">
+            <h2 class="text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">📋 최근 처리 내역</h2>
+            <div id="historyLog" class="text-xs text-zinc-300 space-y-1.5 bg-zinc-800/50 p-3 rounded-xl max-h-40 overflow-y-auto border border-zinc-800">
                 데이터를 불러오는 중...
             </div>
         </div>
@@ -176,9 +191,9 @@
             }
         }
 
-        // 🔒 모드 변경 (출고 ⇄ 입고 ⇄ 관리자 등록)
+        // 모드 변경 (출고 ➔ 입고 ➔ 관리자 등록 순환)
         function toggleWorkMode() {
-            let pwd = prompt("관리자 비밀번호를 입력하세요 (비밀번호: 1234):");
+            let pwd = prompt("관리자 비밀번호를 입력하세요:");
             if (pwd !== ADMIN_PASSWORD) {
                 alert("비밀번호가 틀렸습니다.");
                 return;
@@ -191,21 +206,21 @@
             if (currentWorkMode === 'USE') {
                 currentWorkMode = 'IN';
                 modeDisplay.innerText = "📥 [입고 모드 - 재고 추가]";
-                modeDisplay.className = "font-bold text-base text-blue-700";
+                modeDisplay.className = "font-bold text-base text-blue-400";
                 userSection.style.display = 'block';
                 adminSection.style.display = 'none';
                 alert("입고 모드로 전환되었습니다.");
             } else if (currentWorkMode === 'IN') {
                 currentWorkMode = 'ADMIN';
                 modeDisplay.innerText = "🛠️ [관리자 모드 - 정보 등록]";
-                modeDisplay.className = "font-bold text-base text-yellow-700";
+                modeDisplay.className = "font-bold text-base text-yellow-400";
                 userSection.style.display = 'none';
                 adminSection.style.display = 'block';
                 alert("관리자 등록 모드로 전환되었습니다.");
             } else {
                 currentWorkMode = 'USE';
                 modeDisplay.innerText = "📤 [사용 모드 - 부품 출고]";
-                modeDisplay.className = "font-bold text-base text-green-700";
+                modeDisplay.className = "font-bold text-base text-red-400";
                 userSection.style.display = 'block';
                 adminSection.style.display = 'none';
                 alert("다시 사용(출고) 모드로 전환되었습니다.");
@@ -222,17 +237,17 @@
             if (type === 'part') {
                 partForm.style.display = 'block';
                 engForm.style.display = 'none';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-zinc-400";
             } else {
                 partForm.style.display = 'none';
                 engForm.style.display = 'block';
-                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-gray-500";
-                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-yellow-900 border-b-2 border-yellow-600";
+                tabPartBtn.className = "flex-1 py-2 text-xs font-bold text-zinc-400";
+                tabEngBtn.className = "flex-1 py-2 text-xs font-bold text-red-400 border-b-2 border-red-600";
             }
         }
 
-        // 💾 파이어베이스에 부품 정보 저장
+        // 파이어베이스 부품 정보 저장
         async function savePartToFirebase() {
             const partId = document.getElementById('inputPartId').value.trim();
             const partName = document.getElementById('inputPartName').value.trim();
@@ -260,7 +275,7 @@
             }
         }
 
-        // 💾 파이어베이스에 엔지니어 정보 저장
+        // 파이어베이스 엔지니어 정보 저장
         async function saveEngineerToFirebase() {
             const engName = document.getElementById('inputEngName').value.trim();
             const engDept = document.getElementById('inputEngDept').value.trim();
@@ -285,7 +300,7 @@
             }
         }
 
-        // QR 스캐너 관련 로직 (출고/입고용)
+        // QR 스캐너 로직
         function startQrScanner() {
             if (!currentEngineer) {
                 checkEngineerRegistration();
@@ -377,9 +392,9 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
-                    html += `<div class="py-1 border-b flex justify-between">
+                    html += `<div class="py-1.5 border-b border-zinc-800 flex justify-between">
                         <span><b>[${data.engineer}]</b> ${data.partId}</span>
-                        <span class="text-gray-400">${date}</span>
+                        <span class="text-zinc-500">${date}</span>
                     </div>`;
                 });
                 logContainer.innerHTML = html;
