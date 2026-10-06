@@ -146,7 +146,8 @@
                 </div>
 
                 <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                    <h2 class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">📋 실시간 출고/입고 및 수정 내역</h2>
+                    <h2 class="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">📋 실시간 출고/입고 및 수정 내역</h2>
+                    <p class="text-[10px] text-gray-400 mb-2">* 목록 항목을 터치(클릭)하면 곧바로 입고(반납) 처리가 가능합니다.</p>
                     <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-56 overflow-y-auto">
                         데이터를 불러오는 중...
                     </div>
@@ -213,7 +214,7 @@
 
         <!-- 📊 등록된 전체 파트 목록 조회 섹션 (관리자 모드에서만 노출) -->
         <div id="adminPartsListSection" style="display: none;" class="mt-8 pt-6 border-t border-gray-200">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-2">
                 <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
                     <span>📚</span> DB 등록 부품 목록 현황
                 </h2>
@@ -221,6 +222,7 @@
                     🔄 목록 새로고침
                 </button>
             </div>
+            <p class="text-xs text-purple-600 font-medium mb-4">* 파트 목록 행을 클릭하시면 해당 부품의 상세 이력을 조회할 수 있습니다.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- New Part 목록 테이블 -->
@@ -277,6 +279,22 @@
             <div class="flex gap-2 pt-2">
                 <button onclick="saveHistoryEdit()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold">저장</button>
                 <button onclick="closeEditModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-xs font-bold">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔍 부품별 상세 이력 모달 -->
+    <div id="partHistoryModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <h3 id="modalPartTitle" class="text-sm font-bold text-purple-900">📦 부품 상세 이력</h3>
+                <button onclick="closePartHistoryModal()" class="text-gray-400 hover:text-gray-600 font-bold text-base px-2">✕</button>
+            </div>
+            <div id="modalPartHistoryContent" class="overflow-y-auto space-y-2 flex-1 text-xs text-gray-600">
+                <p class="text-center text-gray-400 py-4">불러오는 중...</p>
+            </div>
+            <div class="pt-2 border-t border-gray-100 text-right">
+                <button onclick="closePartHistoryModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold">닫기</button>
             </div>
         </div>
     </div>
@@ -396,7 +414,7 @@
             initPartSearchAutocomplete();
         });
 
-        // 🔍 부품 부분 검색 및 자동완성 로직 ("pad" 입력 시 관련 부품 모두 검색)
+        // 🔍 부품 부분 검색 및 자동완성 로직
         function initPartSearchAutocomplete() {
             const inputField = document.getElementById('manualPartInput');
             const suggestionList = document.getElementById('suggestionList');
@@ -411,7 +429,6 @@
                 }
 
                 try {
-                    // Firestore에서 부품 목록 가져와서 검색 (또는 캐시된 데이터 활용 가능)
                     const snapshot = await db.collection("parts").get();
                     let matchedParts = [];
                     snapshot.forEach(doc => {
@@ -449,7 +466,6 @@
                 }
             });
 
-            // 외부 클릭 시 검색 목록 닫기
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.search-container')) {
                     suggestionList.style.display = 'none';
@@ -457,10 +473,10 @@
             });
         }
 
-        // 🚀 출고 처리 함수 (New / Test 구분 및 재고 연동)
+        // 🚀 출고 처리 함수
         async function processCheckout() {
             const partId = document.getElementById('selectedPartId').value;
-            const qty = parseInt(document.getElementById('out-quantity').value) || 1;
+            const qty = parseInt(document.getElementById('outQuantity').value) || 1;
 
             if (!currentEngineer) {
                 alert("엔지니어가 선택되지 않았습니다.");
@@ -486,14 +502,12 @@
                     return;
                 }
 
-                // 1. 재고 차감
                 await partRef.update({ stock: firebase.firestore.FieldValue.increment(-qty) });
 
-                // 2. 이력에 기록 (New / Test 타입 명시)
                 await db.collection("usage_history").add({
                     partId: partId,
                     partName: partData.partName,
-                    partType: partData.type, // 'new part' 또는 'test part'
+                    partType: partData.type,
                     engineer: currentEngineer,
                     quantity: qty,
                     action: "OUT",
@@ -503,7 +517,6 @@
 
                 alert(`✅ [출고 완료]\n- 부품: ${partData.partName}\n- 유형: ${partData.type}\n- 수량: ${qty}개`);
                 
-                // 입력 필드 초기화
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 document.getElementById('selectedPartTypeDisplay').value = '';
@@ -520,15 +533,13 @@
         }
 
         // 📦 입고(반납) 처리 함수
-        async function processReturn(historyId, partId, qty, partType) {
-            if (!confirm("이 부품을 다시 입고(반납) 처리하시겠습니까?")) return;
+        async function processReturn(historyId, partId, qty) {
+            if (!confirm("이 출고 건을 입고(반납) 처리하시겠습니까?")) return;
 
             try {
-                // 1. 재고 증가
                 const partRef = db.collection("parts").doc(partId);
                 await partRef.update({ stock: firebase.firestore.FieldValue.increment(qty) });
 
-                // 2. 이력 추가 (IN)
                 await db.collection("usage_history").add({
                     partId: partId,
                     engineer: currentEngineer,
@@ -538,7 +549,6 @@
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 3. 기존 이력 상태 변경
                 await db.collection("usage_history").doc(historyId).update({ status: "반납됨" });
 
                 alert("📦 정상적으로 입고(반납)되었습니다.");
@@ -552,6 +562,49 @@
             }
         }
 
+        // 🔍 관리자 모드: 특정 파트 클릭 시 해당 부품의 상세 이력 모달 띄우기
+        async function openPartHistoryModal(partId, partName) {
+            document.getElementById('modalPartTitle').innerText = `📦 부품 상세 이력: ${partName} (${partId})`;
+            const contentContainer = document.getElementById('modalPartHistoryContent');
+            contentContainer.innerHTML = '<p class="text-center text-gray-400 py-6">이력을 불러오는 중...</p>';
+            document.getElementById('partHistoryModal').style.display = 'flex';
+
+            try {
+                const snapshot = await db.collection("usage_history").where("partId", "==", partId).orderBy("timestamp", "desc").get();
+                if (snapshot.empty) {
+                    contentContainer.innerHTML = '<p class="text-center text-gray-400 py-6">해당 부품의 출고/입고 이력이 없습니다.</p>';
+                    return;
+                }
+
+                let html = "";
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : '방금 전';
+                    const isOut = data.action === 'OUT';
+                    const badgeColor = isOut ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
+
+                    html += `<div class="p-3 border border-gray-100 rounded-xl bg-gray-50 space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">[${data.status || data.action}]</span>
+                            <span class="text-[11px] text-gray-400">${date}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-700">
+                            <span>담당 엔지니어: <strong>${data.engineer}</strong></span>
+                            <span>수량: <strong>${data.quantity}개</strong></span>
+                        </div>
+                    </div>`;
+                });
+                contentContainer.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+                contentContainer.innerHTML = '<p class="text-center text-red-500 py-6">이력을 불러오지 못했습니다.</p>';
+            }
+        }
+
+        function closePartHistoryModal() {
+            document.getElementById('partHistoryModal').style.display = 'none';
+        }
+
         // ✏️ 이력 수정 모달 열기
         function openEditModal(historyId, currentQty) {
             document.getElementById('editLogId').value = historyId;
@@ -563,7 +616,7 @@
             document.getElementById('editModal').style.display = 'none';
         }
 
-        // 💾 이력 수정 저장 (수량 변경 및 재고 차이 반영)
+        // 💾 이력 수정 저장
         async function saveHistoryEdit() {
             const historyId = document.getElementById('editLogId').value;
             const newQty = parseInt(document.getElementById('editQtyInput').value);
@@ -584,11 +637,10 @@
 
                 const histData = histDoc.data();
                 const oldQty = histData.quantity;
-                const qtyDiff = newQty - oldQty; // 수량 차이
+                const qtyDiff = newQty - oldQty;
 
                 if (qtyDiff !== 0) {
                     const partRef = db.collection("parts").doc(histData.partId);
-                    // 출고(OUT) 건이었으므로 수량이 늘어나면(-qtyDiff) 재고가 더 줄어야 함
                     await partRef.update({ stock: firebase.firestore.FieldValue.increment(-qtyDiff) });
                 }
 
@@ -648,7 +700,7 @@
             loadRegisteredPartsList();
         }
 
-        // New Part와 Test Part 목록을 각각 분리하여 렌더링
+        // 📚 등록된 파트 목록 조회 및 클릭 이벤트 연결 (파트별 이력 보기)
         async function loadRegisteredPartsList() {
             const newTableBody = document.getElementById('newPartsTableBody');
             const testTableBody = document.getElementById('testPartsTableBody');
@@ -671,7 +723,8 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const rowHtml = `<tr class="hover:bg-gray-50 transition-all">
+                    const safeName = (data.partName || '').replace(/'/g, "\\'");
+                    const rowHtml = `<tr onclick="openPartHistoryModal('${data.partId}', '${safeName}')" class="hover:bg-purple-50 cursor-pointer transition-all">
                         <td class="p-2.5 font-mono font-bold text-gray-800">${data.partId}</td>
                         <td class="p-2.5 text-gray-700">${data.partName || '-'}</td>
                         <td class="p-2.5 text-right font-bold text-blue-600">${data.stock}개</td>
@@ -770,7 +823,7 @@
                 document.getElementById('workModeDisplay').className = "font-bold text-sm md:text-base text-purple-600";
                 document.getElementById('adminModeSection').style.display = 'block';
                 document.getElementById('adminGuideBox').style.display = 'none';
-                document.getElementById('adminPartsListSection').style.display = 'block'; // 관리자 모드에서 목록 노출
+                document.getElementById('adminPartsListSection').style.display = 'block';
                 loadRegisteredPartsList();
                 if(!currentEngineer) currentEngineer = "관리자";
                 updateEngineerDisplay();
@@ -808,7 +861,7 @@
                 modeDisplay.className = "font-bold text-sm md:text-base text-purple-600";
                 adminSection.style.display = 'block';
                 adminGuideBox.style.display = 'none';
-                adminPartsListSection.style.display = 'block'; // 관리자 모드에서 목록 노출
+                adminPartsListSection.style.display = 'block';
                 loadRegisteredPartsList();
                 alert("관리자 등록 모드로 전환되었습니다.");
             } else {
@@ -822,7 +875,6 @@
             }
         }
 
-        // 관리자 탭 전환 시 부품 폼과 엔지니어 폼이 완전히 독립되도록 분리
         function switchAdminTab(type) {
             const partContent = document.getElementById('adminPartTabContent');
             const engContent = document.getElementById('adminEngTabContent');
@@ -890,6 +942,7 @@
             }
         }
 
+        // 📋 최근 출고/입고 내역 렌더링 (전체 카드 클릭 시 입고 처리 연동)
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
@@ -910,12 +963,16 @@
                     let actionBtns = '';
                     if (isOut && data.status !== '반납됨') {
                         actionBtns = `
-                            <button onclick="processReturn('${docId}', '${data.partId}', ${data.quantity}, '${data.partType}')" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold hover:bg-green-200">반납</button>
-                            <button onclick="openEditModal('${docId}', ${data.quantity})" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold hover:bg-amber-200">수정</button>
+                            <button onclick="event.stopPropagation(); processReturn('${docId}', '${data.partId}', ${data.quantity})" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold hover:bg-green-200">입고(반납)</button>
+                            <button onclick="event.stopPropagation(); openEditModal('${docId}', ${data.quantity})" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold hover:bg-amber-200">수정</button>
                         `;
                     }
 
-                    html += `<div class="p-2 border border-gray-100 rounded-lg bg-white shadow-sm space-y-1">
+                    // 카드 전체 클릭 시 입고 처리 진행 여부 확인 또는 편의 기능 제공
+                    let clickAction = (isOut && data.status !== '반납됨') ? `onclick="processReturn('${docId}', '${data.partId}', ${data.quantity})"` : '';
+                    let cursorStyle = (isOut && data.status !== '반납됨') ? 'cursor-pointer hover:border-green-300' : '';
+
+                    html += `<div ${clickAction} class="p-2.5 border border-gray-100 rounded-xl bg-white shadow-sm space-y-1 transition-all ${cursorStyle}" title="${(isOut && data.status !== '반납됨') ? '클릭하면 입고(반납) 처리됩니다.' : ''}">
                         <div class="flex justify-between items-center">
                             <div>
                                 <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeColor}">[${data.status || '완료'}]</span>
