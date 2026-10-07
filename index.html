@@ -214,7 +214,7 @@
 
         </div>
 
-        <!-- 📊 등록된 전체 파트 목록 조회 섹션 -->
+        <!-- 📊 등록된 전체 파트 목록 조회 및 검색 섹션 -->
         <div id="adminPartsListSection" style="display: none;" class="mt-8 pt-6 border-t border-gray-200">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -224,7 +224,12 @@
                     🔄 목록 새로고침
                 </button>
             </div>
-            <p class="text-xs text-purple-600 font-medium mb-4">* 파트 목록 행을 클릭하시면 해당 부품의 상세 이력을 조회할 수 있습니다.</p>
+            <p class="text-xs text-purple-600 font-medium mb-3">* 파트 행을 클릭하면 상세 이력을 조회할 수 있으며, 재고 수정 버튼으로 수량을 직접 변경할 수 있습니다.</p>
+
+            <!-- 🔍 파트 검색바 추가 -->
+            <div class="mb-4">
+                <input type="text" id="adminPartSearchInput" placeholder="🔍 파트 ID 또는 부품 이름으로 검색..." oninput="filterAdminPartList()" class="w-full text-xs p-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:outline-none focus:border-purple-500 shadow-sm">
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- New Part 목록 테이블 -->
@@ -236,7 +241,7 @@
                                 <tr>
                                     <th class="p-2.5">파트 ID</th>
                                     <th class="p-2.5">부품 이름</th>
-                                    <th class="p-2.5 text-right">재고</th>
+                                    <th class="p-2.5 text-right">재고 관리</th>
                                 </tr>
                             </thead>
                             <tbody id="newPartsTableBody" class="divide-y divide-gray-100 bg-white">
@@ -255,7 +260,7 @@
                                 <tr>
                                     <th class="p-2.5">파트 ID</th>
                                     <th class="p-2.5">부품 이름</th>
-                                    <th class="p-2.5 text-right">재고</th>
+                                    <th class="p-2.5 text-right">재고 관리</th>
                                 </tr>
                             </thead>
                             <tbody id="testPartsTableBody" class="divide-y divide-gray-100 bg-white">
@@ -800,6 +805,41 @@
             }
         }
 
+        // 🛠️ 관리자 모드: 파트 재고 직접 수정 함수
+        async function editPartStockAdmin(partId, currentStock) {
+            const newStockInput = prompt(`[${partId}] 부품의 새로운 재고 수량을 입력하세요:`, currentStock);
+            if (newStockInput === null) return;
+            const newStock = parseInt(newStockInput);
+            if (isNaN(newStock) || newStock < 0) {
+                alert("올바른 숫자(0 이상)를 입력해주세요.");
+                return;
+            }
+
+            try {
+                await db.collection("parts").doc(partId).update({ stock: newStock });
+                alert(`✅ 재고가 ${newStock}개로 수정되었습니다.`);
+                loadRegisteredPartsList();
+            } catch (error) {
+                console.error(error);
+                alert("재고 수정 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 🔍 관리자 파트 목록 실시간 검색 필터
+        function filterAdminPartList() {
+            const keyword = document.getElementById('adminPartSearchInput').value.trim().toLowerCase();
+            const rows = document.querySelectorAll('.admin-part-row');
+
+            rows.forEach(row => {
+                const searchText = row.getAttribute('data-search').toLowerCase();
+                if (searchText.includes(keyword)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
         async function bulkRegisterNewPartsSafe() {
             if (!confirm(`New Part 총 ${newPartsData.length}개의 데이터를 안전하게 일괄 등록하시겠습니까?`)) return;
             let successCount = 0;
@@ -865,10 +905,15 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const safeName = (data.partName || '').replace(/'/g, "\\'");
-                    const rowHtml = `<tr onclick="openPartHistoryModal('${data.partId}', '${safeName}')" class="hover:bg-purple-50 cursor-pointer transition-all">
-                        <td class="p-2.5 font-mono font-bold text-gray-800">${data.partId}</td>
-                        <td class="p-2.5 text-gray-700">${data.partName || '-'}</td>
-                        <td class="p-2.5 text-right font-bold text-blue-600">${data.stock}개</td>
+                    const searchKeyword = `${data.partId} ${data.partName || ''}`;
+
+                    const rowHtml = `<tr class="admin-part-row hover:bg-purple-50 transition-all border-b border-gray-100" data-search="${searchKeyword}">
+                        <td class="p-2.5 font-mono font-bold text-gray-800 cursor-pointer" onclick="openPartHistoryModal('${data.partId}', '${safeName}')">${data.partId}</td>
+                        <td class="p-2.5 text-gray-700 cursor-pointer" onclick="openPartHistoryModal('${data.partId}', '${safeName}')">${data.partName || '-'}</td>
+                        <td class="p-2.5 text-right font-bold text-blue-600">
+                            <span>${data.stock}개</span>
+                            <button onclick="editPartStockAdmin('${data.partId}', ${data.stock})" class="ml-2 text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold hover:bg-purple-200">수정</button>
+                        </td>
                     </tr>`;
 
                     if (data.type === 'new part') {
@@ -882,6 +927,9 @@
 
                 newTableBody.innerHTML = newCount > 0 ? newHtml : `<tr><td colspan="3" class="p-4 text-center text-gray-400">New Part 없음</td></tr>`;
                 testTableBody.innerHTML = testCount > 0 ? testHtml : `<tr><td colspan="3" class="p-4 text-center text-gray-400">Test Part 없음</td></tr>`;
+
+                // 검색어가 입력되어 있었다면 목록 로드 후 필터 즉시 적용
+                filterAdminPartList();
 
             } catch (error) {
                 console.error(error);
