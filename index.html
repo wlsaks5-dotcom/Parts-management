@@ -140,14 +140,19 @@
                         </div>
                     </div>
 
+                    <div>
+                        <span class="text-[10px] text-gray-500 block mb-1">사용 목적 / 사유 (선택 또는 입력)</span>
+                        <input type="text" id="actionReasonInput" placeholder="예: 장비 에러로 인한 교체, 정기 점검 등" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800">
+                    </div>
+
                     <button id="actionProcessBtn" onclick="processCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
                         🚀 선택한 부품 출고하기
                     </button>
                 </div>
 
                 <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                    <h2 class="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">📋 실시간 출고/입고 및 수정 내역</h2>
-                    <p class="text-[10px] text-purple-600 font-medium mb-2">* 출고 내역 카드를 터치(클릭)하면 상세 이력 확인 및 입고(반납) 처리가 가능합니다.</p>
+                    <h2 class="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">📋 미반납 출고 내역</h2>
+                    <p class="text-[10px] text-purple-600 font-medium mb-2">* 항목을 터치하면 상세 이력 확인 및 입고(반납) 처리가 가능합니다.</p>
                     <div id="historyLog" class="text-xs text-gray-600 space-y-1.5 max-h-56 overflow-y-auto">
                         데이터를 불러오는 중...
                     </div>
@@ -177,7 +182,7 @@
 
                         <div class="space-y-2 pt-2 border-t border-purple-200">
                             <p class="text-[11px] font-bold text-gray-700">개별 부품 추가</p>
-                            <input type="text" id="inputPartId" placeholder="파트 넘버 (예: 183060)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                            <input type="text" id="inputPartId" placeholder="파트 넘버 또는 QR 코드 값" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                             <input type="text" id="inputPartName" placeholder="부품 이름" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                             <div class="grid grid-cols-2 gap-2">
                                 <input type="number" id="inputPartStock" value="0" placeholder="수량" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
@@ -423,7 +428,7 @@
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 async (decodedText) => {
                     await stopScanner();
-                    await handleScannedResult(decodedText);
+                    await handleScannedResult(decodedText.trim());
                 },
                 (errorMessage) => {}
             ).catch(err => {
@@ -440,17 +445,37 @@
             document.getElementById('stopBtn').style.display = 'none';
         }
 
-        async function handleScannedResult(partId) {
+        // 🔍 스캔된 QR 결과 처리 (DB에 없으면 자동 신규 등록 팝업 제공)
+        async function handleScannedResult(scannedValue) {
             try {
-                const partDoc = await db.collection("parts").doc(partId).get();
+                const partDoc = await db.collection("parts").doc(scannedValue).get();
+                
                 if (!partDoc.exists) {
-                    alert(`⚠️ 등록되지 않은 부품 ID(${partId})입니다.`);
+                    const partNameInput = prompt(`⚠️ 등록되지 않은 QR 번호입니다 (${scannedValue}).\n이 번호로 등록할 '부품 이름'을 입력해주세요:`);
+                    if (!partNameInput) return;
+                    
+                    const qtyInput = prompt("초기 재고 수량을 입력하세요:", "1");
+                    const stock = parseInt(qtyInput) || 1;
+
+                    await db.collection("parts").doc(scannedValue).set({
+                        partId: scannedValue,
+                        partName: partNameInput,
+                        stock: stock,
+                        type: currentPartTab,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    alert(`🎉 신규 부품이 자동으로 등록되었습니다!\n- 번호: ${scannedValue}\n- 이름: ${partNameInput}`);
+                    
+                    document.getElementById('manualPartInput').value = partNameInput;
+                    document.getElementById('selectedPartId').value = scannedValue;
+                    document.getElementById('selectedPartTypeDisplay').value = currentPartTab;
                     return;
                 }
+
                 const partData = partDoc.data();
-                
                 document.getElementById('manualPartInput').value = partData.partName;
-                document.getElementById('selectedPartId').value = partId;
+                document.getElementById('selectedPartId').value = scannedValue;
                 document.getElementById('selectedPartTypeDisplay').value = partData.type;
                 
                 if (currentWorkMode === 'USE') {
@@ -527,6 +552,7 @@
         async function processCheckout() {
             const partId = document.getElementById('selectedPartId').value;
             const qty = parseInt(document.getElementById('outQuantity').value) || 1;
+            const reason = document.getElementById('actionReasonInput').value.trim() || '목적 미입력';
 
             if (!currentEngineer) {
                 alert("엔지니어가 선택되지 않았습니다.");
@@ -560,17 +586,19 @@
                     partType: partData.type,
                     engineer: currentEngineer,
                     quantity: qty,
+                    reason: reason,
                     action: "OUT",
                     status: "출고완료",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                alert(`✅ [출고 완료]\n- 부품: ${partData.partName}\n- 유형: ${partData.type}\n- 수량: ${qty}개`);
+                alert(`✅ [출고 완료]\n- 부품: ${partData.partName}\n- 수량: ${qty}개\n- 목적: ${reason}`);
                 
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 document.getElementById('selectedPartTypeDisplay').value = '';
                 document.getElementById('outQuantity').value = '1';
+                document.getElementById('actionReasonInput').value = '';
 
                 loadRecentHistory();
             } catch (error) {
@@ -583,6 +611,7 @@
         async function processDirectReturnInput() {
             const partId = document.getElementById('selectedPartId').value;
             const qty = parseInt(document.getElementById('outQuantity').value) || 1;
+            const reason = document.getElementById('actionReasonInput').value.trim() || '사유 미입력';
 
             if (!partId) {
                 alert("검색 목록에서 입고할 부품을 선택해주세요.");
@@ -607,16 +636,19 @@
                     partType: partData.type,
                     engineer: currentEngineer,
                     quantity: qty,
+                    reason: reason,
                     action: "IN",
                     status: "입고완료",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                alert(`📦 [입고 완료]\n- 부품: ${partData.partName}\n- 입고 수량: +${qty}개`);
+                alert(`📦 [입고 완료]\n- 부품: ${partData.partName}\n- 수량: +${qty}개\n- 사유: ${reason}`);
+                
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 document.getElementById('selectedPartTypeDisplay').value = '';
                 document.getElementById('outQuantity').value = '1';
+                document.getElementById('actionReasonInput').value = '';
 
                 loadRecentHistory();
             } catch (error) {
@@ -627,7 +659,9 @@
 
         // 📦 이력 목록에서 곧바로 입고(반납) 처리
         async function processReturn(historyId, partId, qty) {
-            if (!confirm("이 출고 건을 입고(반납) 처리하시겠습니까?")) return;
+            let reason = prompt("입고(반납) 사유를 입력하세요:", "정상 반납");
+            if (reason === null) return;
+            if (!reason.trim()) reason = "정상 반납";
 
             try {
                 const partRef = db.collection("parts").doc(partId);
@@ -642,6 +676,7 @@
                     partType: partData.type,
                     engineer: currentEngineer,
                     quantity: qty,
+                    reason: reason,
                     action: "IN",
                     status: "입고(반납)완료",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -652,7 +687,6 @@
                 alert("📦 정상적으로 입고(반납)되었습니다.");
                 loadRecentHistory();
                 
-                // 모달이 열려있다면 상세 이력 새로고침
                 const modal = document.getElementById('partHistoryModal');
                 if (modal.style.display === 'flex') {
                     openPartHistoryModal(partId, partData.partName);
@@ -663,7 +697,7 @@
             }
         }
 
-        // 🔍 출고 내역 카드 클릭 시 부품 상세 이력 및 입고(반납) 기능 포함 모달 열기
+        // 🔍 부품 상세 이력 및 입고(반납) 처리 모달 열기
         async function openPartHistoryModal(partId, partName) {
             document.getElementById('modalPartTitle').innerText = `📦 부품 상세 이력 및 입고: ${partName} (${partId})`;
             const contentContainer = document.getElementById('modalPartHistoryContent');
@@ -684,6 +718,7 @@
                     const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : '방금 전';
                     const isOut = data.action === 'OUT';
                     const badgeColor = isOut ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
+                    const reasonText = data.reason ? `목적/사유: ${data.reason}` : '';
 
                     let returnBtnHtml = '';
                     if (isOut && data.status !== '반납됨') {
@@ -701,6 +736,7 @@
                             <span>담당 엔지니어: <strong>${data.engineer}</strong></span>
                             <span>수량: <strong>${data.quantity}개</strong></span>
                         </div>
+                        ${reasonText ? `<div class="text-[11px] text-gray-500 bg-white p-1.5 rounded border border-gray-200 mt-1">${reasonText}</div>` : ''}
                         ${returnBtnHtml}
                     </div>`;
                 });
@@ -1085,38 +1121,46 @@
             }
         }
 
-        // 📋 최근 출고/입고 내역 렌더링 (카드 클릭 시 상세 이력 및 입고 처리 모달 오픈)
+        // 📋 미반납 출고 내역만 메인 화면에 렌더링
         async function loadRecentHistory() {
             const logContainer = document.getElementById('historyLog');
             try {
-                const snapshot = await db.collection("usage_history").orderBy("timestamp", "desc").limit(6).get();
+                const snapshot = await db.collection("usage_history")
+                    .where("action", "==", "OUT")
+                    .orderBy("timestamp", "desc")
+                    .get();
+
                 if (snapshot.empty) {
-                    logContainer.innerHTML = "기록된 내역이 없습니다.";
+                    logContainer.innerHTML = "미반납된 출고 내역이 없습니다.";
                     return;
                 }
+
                 let html = "";
+                let count = 0;
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const docId = doc.id;
-                    const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
-                    const isOut = data.action === 'OUT';
-                    const badgeColor = isOut ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
-                    const typeBadge = data.partType === 'new part' ? '✨ New' : '🧪 Test';
 
-                    let actionBtns = '';
-                    if (isOut && data.status !== '반납됨') {
-                        actionBtns = `
-                            <button onclick="event.stopPropagation(); processReturn('${docId}', '${data.partId}', ${data.quantity})" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold hover:bg-green-200">입고(반납)</button>
-                            <button onclick="event.stopPropagation(); openEditModal('${docId}', ${data.quantity})" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold hover:bg-amber-200">수정</button>
-                        `;
-                    }
+                    if (data.status === '반납됨') return;
+                    if (count >= 6) return;
+
+                    count++;
+                    const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : '방금 전';
+                    const typeBadge = data.partType === 'new part' ? '✨ New' : '🧪 Test';
+                    const reasonText = data.reason ? `목적: ${data.reason}` : '';
+
+                    const actionBtns = `
+                        <button onclick="event.stopPropagation(); processReturn('${docId}', '${data.partId}', ${data.quantity})" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold hover:bg-green-200">입고(반납)</button>
+                        <button onclick="event.stopPropagation(); openEditModal('${docId}', ${data.quantity})" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold hover:bg-amber-200">수정</button>
+                    `;
 
                     const safeName = (data.partName || '').replace(/'/g, "\\'");
                     
                     html += `<div onclick="openPartHistoryModal('${data.partId}', '${safeName}')" class="p-2.5 border border-gray-100 rounded-xl bg-white shadow-sm space-y-1 transition-all cursor-pointer hover:border-purple-300 hover:bg-purple-50/20" title="클릭하면 해당 부품의 이력 및 입고 처리를 할 수 있습니다.">
                         <div class="flex justify-between items-center">
                             <div>
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeColor}">[${data.status || '완료'}]</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-blue-600 bg-blue-50">[출고완료]</span>
                                 <span class="font-bold text-gray-800">${data.partName || data.partId}</span>
                                 <span class="text-[10px] text-gray-500">(${typeBadge})</span>
                             </div>
@@ -1126,9 +1170,11 @@
                             <span>담당: <strong>${data.engineer}</strong> | 수량: <strong>${data.quantity}개</strong></span>
                             <div class="flex gap-1">${actionBtns}</div>
                         </div>
+                        ${reasonText ? `<div class="text-[10px] text-gray-500 truncate">💬 ${reasonText}</div>` : ''}
                     </div>`;
                 });
-                logContainer.innerHTML = html;
+
+                logContainer.innerHTML = count > 0 ? html : "미반납된 출고 내역이 없습니다.";
             } catch (error) {
                 console.error(error);
                 logContainer.innerHTML = "내역을 불러오지 못했습니다.";
