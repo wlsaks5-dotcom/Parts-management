@@ -433,7 +433,8 @@
                 const snapshot = await db.collection("parts").get();
                 partsCache = [];
                 snapshot.forEach(doc => {
-                    partsCache.push({ id: doc.id, ...doc.data() });
+                    const data = doc.data();
+                    partsCache.push({ id: doc.id, name: data.name || data.partName || '', ...data });
                 });
             } catch (e) {
                 console.error("캐시 로드 실패:", e);
@@ -898,7 +899,7 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const partName = data.name || '이름 없음';
+                    const partName = data.name || data.partName || '이름 없음';
                     const qrVal = data.qrCode || '';
                     const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
                         <td class="p-2.5 font-bold">${doc.id}</td>
