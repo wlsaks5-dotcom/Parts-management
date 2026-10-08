@@ -756,9 +756,13 @@
         function stopQrScannerForEdit() {
             const container = document.getElementById('edit-qr-container');
             if (html5QrCodeEdit) {
-                html5QrCodeEdit.stop().then(() => { container.style.display = 'none'; }).catch(() => { container.style.display = 'none'; });
+                html5QrCodeEdit.stop().then(() => { 
+                    if(container) container.style.display = 'none'; 
+                }).catch(() => { 
+                    if(container) container.style.display = 'none'; 
+                });
             } else {
-                container.style.display = 'none';
+                if(container) container.style.display = 'none';
             }
         }
 
@@ -902,7 +906,6 @@
                     const partName = data.name || data.partName || '이름 없음';
                     const qrVal = data.qrCode || '';
                     
-                    // '수정' 텍스트가 세로로 떨어지지 않도록 whitespace-nowrap 추가
                     const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
                         <td class="p-2.5 font-bold">${doc.id}</td>
                         <td class="p-2.5">${partName}</td>
@@ -998,10 +1001,11 @@
         }
 
         function closeAdminPartEditModal() {
-            stopQrScannerForEdit();
             document.getElementById('adminPartEditModal').style.display = 'none';
+            stopQrScannerForEdit();
         }
 
+        // 부품 정보 수정 함수 (안전한 set with merge 사용)
         async function saveAdminPartEdit() {
             const id = document.getElementById('editDocId').value;
             const name = document.getElementById('modalEditPartName').value.trim();
@@ -1015,20 +1019,22 @@
             }
 
             try {
-                await db.collection("parts").doc(id).update({
+                // 문서가 존재하지 않아도 오류 없이 생성/수정되도록 set({ ... }, { merge: true }) 사용
+                await db.collection("parts").doc(id).set({
                     name,
                     stock,
                     type,
                     qrCode,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                }, { merge: true });
+
                 alert("부품 정보 및 QR 연동이 수정되었습니다.");
                 closeAdminPartEditModal();
                 loadRegisteredPartsList();
                 preloadPartsCache();
             } catch (e) {
-                console.error(e);
-                alert("수정 중 오류가 발생했습니다.");
+                console.error("수정 오류 상세:", e);
+                alert("수정 중 오류가 발생했습니다: " + (e.message || e));
             }
         }
 
