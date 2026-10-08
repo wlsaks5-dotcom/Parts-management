@@ -274,11 +274,12 @@
                                 <tr>
                                     <th class="p-2.5">파트 넘버</th>
                                     <th class="p-2.5">부품 이름</th>
+                                    <th class="p-2.5 text-center">재고 수량</th>
                                     <th class="p-2.5 text-right">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="newPartsTableBody" class="divide-y divide-gray-100 bg-white">
-                                <tr><td colspan="3" class="p-4 text-center text-gray-400">로딩 중...</td></tr>
+                                <tr><td colspan="4" class="p-4 text-center text-gray-400">로딩 중...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -293,11 +294,12 @@
                                 <tr>
                                     <th class="p-2.5">파트 넘버</th>
                                     <th class="p-2.5">부품 이름</th>
+                                    <th class="p-2.5 text-center">재고 수량</th>
                                     <th class="p-2.5 text-right">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="testPartsTableBody" class="divide-y divide-gray-100 bg-white">
-                                <tr><td colspan="3" class="p-4 text-center text-gray-400">로딩 중...</td></tr>
+                                <tr><td colspan="4" class="p-4 text-center text-gray-400">로딩 중...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -434,7 +436,7 @@
                 partsCache = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    partsCache.push({ id: doc.id, name: data.name || data.partName || '', ...data });
+                    partsCache.push({ id: doc.id, name: data.name || data.partName || '', stock: data.stock || 0, ...data });
                 });
             } catch (e) {
                 console.error("캐시 로드 실패:", e);
@@ -536,6 +538,7 @@
             }
         }
 
+        // 출고 처리 시 현재고 재고 수량 차감 연동
         async function processCheckout() {
             if (!currentEngineer) {
                 alert("엔지니어 정보가 없습니다.");
@@ -553,6 +556,7 @@
             }
 
             try {
+                // 1. 히스토리 기록 추가
                 await db.collection("history").add({
                     partId,
                     partName,
@@ -563,10 +567,18 @@
                     status: 'PENDING',
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // 2. 부품 재고 수량 실시간 차감
+                await db.collection("parts").doc(partId).update({
+                    stock: firebase.firestore.FieldValue.increment(-quantity)
+                });
+
                 alert(`성공적으로 출고되었습니다: ${partName} (${quantity}개)`);
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 loadRecentHistory();
+                preloadPartsCache();
+                loadRegisteredPartsList();
             } catch (e) {
                 console.error(e);
                 alert("출고 처리 중 오류가 발생했습니다.");
@@ -596,10 +608,18 @@
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     checkinTimestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // 직접 입고 시 재고 증가 처리
+                await db.collection("parts").doc(partId).update({
+                    stock: firebase.firestore.FieldValue.increment(quantity)
+                });
+
                 alert(`성공적으로 입고 처리되었습니다: ${partName} (${quantity}개)`);
                 document.getElementById('manualPartInput').value = '';
                 document.getElementById('selectedPartId').value = '';
                 loadRecentHistory();
+                preloadPartsCache();
+                loadRegisteredPartsList();
             } catch (e) {
                 console.error(e);
                 alert("입고 처리 중 오류가 발생했습니다.");
@@ -626,7 +646,6 @@
             const overdueBanner = document.getElementById('overdueAlertBanner');
 
             try {
-                // 색인(Index) 에러 방지를 위해 orderBy를 제거하거나 단일 필드 조회로 안전하게 로드
                 const snapshot = await db.collection("history").where("status", "==", "PENDING").get();
                 let html = '';
                 let overdueHtml = '';
@@ -669,7 +688,7 @@
                 }
             } catch (e) {
                 console.error("이력 로드 실패:", e);
-                container.innerHTML = '<p class="text-center text-gray-400 py-4">이력을 불러오지 못했습니다.</p>';
+                container.innerHTML = '<p class="text-center text-red-400 py-4">이력을 불러오지 못했습니다.</p>';
             }
         }
 
@@ -754,7 +773,6 @@
             });
         }
 
-        // 안전한 스캐너 정지 함수 (스캔 중이 아닐 때 에러 방지)
         function stopQrScannerForEdit() {
             const container = document.getElementById('edit-qr-container');
             if (html5QrCodeEdit && html5QrCodeEdit.isScanning) {
@@ -897,6 +915,7 @@
             }
         }
 
+        // 현재고 목록에 수량 컬럼 포함하여 렌더링
         async function loadRegisteredPartsList() {
             try {
                 const snapshot = await db.collection("parts").get();
@@ -907,10 +926,12 @@
                     const data = doc.data();
                     const partName = data.name || data.partName || '이름 없음';
                     const qrVal = data.qrCode || '';
+                    const stockVal = data.stock !== undefined ? data.stock : 0;
                     
-                    const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
+                    const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${stockVal}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
                         <td class="p-2.5 font-bold">${doc.id}</td>
                         <td class="p-2.5">${partName}</td>
+                        <td class="p-2.5 text-center font-bold text-blue-600">${stockVal}개</td>
                         <td class="p-2.5 text-right whitespace-nowrap"><span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">수정</span></td>
                     </tr>`;
 
@@ -921,8 +942,8 @@
                     }
                 });
 
-                document.getElementById('newPartsTableBody').innerHTML = newHtml || '<tr><td colspan="3" class="p-4 text-center text-gray-400">등록된 New Part가 없습니다.</td></tr>';
-                document.getElementById('testPartsTableBody').innerHTML = testHtml || '<tr><td colspan="3" class="p-4 text-center text-gray-400">등록된 Test Part가 없습니다.</td></tr>';
+                document.getElementById('newPartsTableBody').innerHTML = newHtml || '<tr><td colspan="4" class="p-4 text-center text-gray-400">등록된 New Part가 없습니다.</td></tr>';
+                document.getElementById('testPartsTableBody').innerHTML = testHtml || '<tr><td colspan="4" class="p-4 text-center text-gray-400">등록된 Test Part가 없습니다.</td></tr>';
             } catch (e) {
                 console.error(e);
             }
@@ -962,7 +983,7 @@
                             <p class="text-[10px] text-gray-500">사유: ${data.reason}</p>
                             <p class="text-[10px] text-gray-400">상태: ${isPending ? '출고중 (미반납)' : '입고완료'}</p>
                         </div>
-                        ${isPending ? `<button onclick="processCheckin('${doc.id}', '${data.partName}')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-[10px] font-bold">반납(입고)</button>` : ''}
+                        ${isPending ? `<button onclick="processCheckin('${doc.id}', '${data.partName}',${data.quantity})" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-[10px] font-bold">반납(입고)</button>` : ''}
                     </div>`;
                 });
                 content.innerHTML = html;
@@ -972,16 +993,29 @@
             }
         }
 
-        async function processCheckin(historyId, partName) {
+        // 반납(입고) 처리 시 재고 수량 다시 증가 연동
+        async function processCheckin(historyId, partName, quantity) {
             if (!confirm(`'${partName}' 부품을 반납(입고) 처리하시겠습니까?`)) return;
             try {
+                // 히스토리 상태 변경
+                const historyDoc = await db.collection("history").doc(historyId).get();
+                const partId = historyDoc.data().partId;
+
                 await db.collection("history").doc(historyId).update({
                     status: 'COMPLETED',
                     checkinTimestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // 재고 수량 증가
+                await db.collection("parts").doc(partId).update({
+                    stock: firebase.firestore.FieldValue.increment(quantity)
+                });
+
                 alert("입고(반납) 처리되었습니다.");
                 closePartHistoryModal();
                 loadRecentHistory();
+                preloadPartsCache();
+                loadRegisteredPartsList();
             } catch (e) {
                 console.error(e);
                 alert("처리 중 오류가 발생했습니다.");
