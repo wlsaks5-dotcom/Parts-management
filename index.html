@@ -105,7 +105,7 @@
                     <p class="text-[11px] text-gray-500 font-medium">현재 작업 모드</p>
                     <span id="workModeDisplay" class="font-bold text-sm md:text-base text-blue-600">📤 [사용 모드 - 부품 출고]</span>
                 </div>
-                <button onclick="toggleWorkMode()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition-all">모드 변경</button>
+                <button type="button" onclick="toggleWorkMode()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition-all">모드 변경</button>
             </div>
         </div>
 
@@ -157,7 +157,7 @@
                         <input type="text" id="actionReasonInput" placeholder="예: 장비 에러로 인한 교체, 정기 점검 등" class="w-full text-xs p-2.5 bg-white border border-gray-300 rounded-lg text-gray-800">
                     </div>
 
-                    <button id="actionProcessBtn" onclick="processCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
+                    <button id="actionProcessBtn" onclick="processAction()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm">
                         🚀 선택한 부품 출고하기
                     </button>
                 </div>
@@ -194,17 +194,7 @@
                     </div>
 
                     <div id="adminPartTabContent" class="space-y-4">
-                        <div class="bg-white border border-purple-200 rounded-xl p-3 shadow-sm space-y-2">
-                            <p class="text-[11px] text-gray-600 font-medium">📋 파트 분류별 안전 일괄 등록</p>
-                            <button onclick="bulkRegisterNewPartsSafe()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold shadow transition-all">
-                                🚀 New Part 안전 일괄 등록
-                            </button>
-                            <button onclick="bulkRegisterTestPartsSafe()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-xs font-bold shadow transition-all">
-                                🚀 Test Part 안전 일괄 등록
-                            </button>
-                        </div>
-
-                        <div class="space-y-2 pt-2 border-t border-purple-200">
+                        <div class="space-y-2 pt-2">
                             <p class="text-[11px] font-bold text-gray-700">개별 부품 추가</p>
                             <input type="text" id="inputPartName" placeholder="부품 이름 (예: Pad Assembly)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                             <input type="text" id="inputPartId" placeholder="파트 넘버 (품번)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
@@ -304,21 +294,6 @@
     </div>
 
     <!-- 모달들 -->
-    <div id="editModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
-            <h3 class="text-sm font-bold text-gray-900">✏️ 출고 이력 수정</h3>
-            <input type="hidden" id="editLogId">
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">수정할 수량</label>
-                <input type="number" id="editQtyInput" min="1" class="w-full text-xs p-2.5 border border-gray-300 rounded-lg">
-            </div>
-            <div class="flex gap-2 pt-2">
-                <button onclick="saveHistoryEdit()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold">저장</button>
-                <button onclick="closeEditModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-xs font-bold">취소</button>
-            </div>
-        </div>
-    </div>
-
     <div id="partHistoryModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3">
@@ -408,7 +383,6 @@
         let currentEngineer = localStorage.getItem('device_engineer') || '';
         let currentWorkMode = 'USE';
         let currentPartTab = 'new part';
-        let html5QrCode = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             checkDeviceAuthStatus();
@@ -480,35 +454,35 @@
         }
 
         function toggleWorkMode() {
+            const modeDisplay = document.getElementById('workModeDisplay');
+            const actionContainer = document.getElementById('actionBoxContainer');
+            const actionTitle = document.getElementById('actionBoxTitle');
+            const actionBtn = document.getElementById('actionProcessBtn');
+
             if (currentWorkMode === 'USE') {
                 currentWorkMode = 'IN';
-                document.getElementById('workModeDisplay').innerText = '📥 [입고 모드 - 부품 반납]';
-                document.getElementById('workModeDisplay').className = 'font-bold text-sm md:text-base text-amber-600';
-                document.getElementById('actionBoxContainer').className = 'bg-amber-50/50 border border-amber-100 rounded-xl p-4 space-y-3';
-                document.getElementById('actionBoxTitle').innerText = '부품 검색 및 입고(반납)';
-                document.getElementById('actionProcessBtn').innerText = '📥 선택한 부품 입고(반납)하기';
-                document.getElementById('actionProcessBtn').className = 'w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm';
+                modeDisplay.innerText = '📥 [입고 모드 - 부품 반납]';
+                modeDisplay.className = 'font-bold text-sm md:text-base text-amber-600';
+                actionContainer.className = 'bg-amber-50/50 border border-amber-100 rounded-xl p-4 space-y-3';
+                actionTitle.innerText = '부품 검색 및 입고(반납)';
+                actionBtn.innerText = '📥 선택한 부품 입고(반납)하기';
+                actionBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm';
             } else {
                 currentWorkMode = 'USE';
-                document.getElementById('workModeDisplay').innerText = '📤 [사용 모드 - 부품 출고]';
-                document.getElementById('workModeDisplay').className = 'font-bold text-sm md:text-base text-blue-600';
-                document.getElementById('actionBoxContainer').className = 'bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-3';
-                document.getElementById('actionBoxTitle').innerText = '부품 검색 및 출고';
-                document.getElementById('actionProcessBtn').innerText = '🚀 선택한 부품 출고하기';
-                document.getElementById('actionProcessBtn').className = 'w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm';
+                modeDisplay.innerText = '📤 [사용 모드 - 부품 출고]';
+                modeDisplay.className = 'font-bold text-sm md:text-base text-blue-600';
+                actionContainer.className = 'bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-3';
+                actionTitle.innerText = '부품 검색 및 출고';
+                actionBtn.innerText = '🚀 선택한 부품 출고하기';
+                actionBtn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-bold transition-all shadow-sm';
             }
         }
 
-        function switchPartTab(tab) {
-            currentPartTab = tab;
-            const btnNew = document.getElementById('tabNewParts');
-            const btnUsed = document.getElementById('tabUsedParts');
-            if (tab === 'new part') {
-                btnNew.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all';
-                btnUsed.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all';
+        function processAction() {
+            if (currentWorkMode === 'USE') {
+                processCheckout();
             } else {
-                btnUsed.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-amber-600 border-b-2 border-amber-600 transition-all';
-                btnNew.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all';
+                processDirectCheckin();
             }
         }
 
@@ -546,6 +520,52 @@
             } catch (e) {
                 console.error(e);
                 alert("출고 처리 중 오류가 발생했습니다.");
+            }
+        }
+
+        async function processDirectCheckin() {
+            const partId = document.getElementById('selectedPartId').value;
+            const partName = document.getElementById('manualPartInput').value;
+            const quantity = parseInt(document.getElementById('outQuantity').value) || 1;
+            const reason = document.getElementById('actionReasonInput').value.trim() || '입고 반납';
+
+            if (!partId || !partName) {
+                alert("입고할 부품을 선택해주세요.");
+                return;
+            }
+
+            try {
+                await db.collection("history").add({
+                    partId,
+                    partName,
+                    engineer: currentEngineer || '관리자',
+                    quantity,
+                    reason,
+                    type: 'CHECKIN',
+                    status: 'COMPLETED',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    checkinTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert(`성공적으로 입고 처리되었습니다: ${partName} (${quantity}개)`);
+                document.getElementById('manualPartInput').value = '';
+                document.getElementById('selectedPartId').value = '';
+                loadRecentHistory();
+            } catch (e) {
+                console.error(e);
+                alert("입고 처리 중 오류가 발생했습니다.");
+            }
+        }
+
+        function switchPartTab(tab) {
+            currentPartTab = tab;
+            const btnNew = document.getElementById('tabNewParts');
+            const btnUsed = document.getElementById('tabUsedParts');
+            if (tab === 'new part') {
+                btnNew.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all';
+                btnUsed.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all';
+            } else {
+                btnUsed.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-amber-600 border-b-2 border-amber-600 transition-all';
+                btnNew.className = 'flex-1 py-3 text-xs md:text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all';
             }
         }
 
@@ -719,7 +739,6 @@
                 let testHtml = '';
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // 테이블에 큐알 정보(qrCode)는 시각적으로 노출하지 않음
                     const row = `<tr class="hover:bg-purple-50/55 cursor-pointer" onclick="openAdminPartEditModal('${doc.id}', '${data.partId || ''}', '${data.partName}', '${data.qrCode || ''}', ${data.stock || 0}, '${data.type}')">
                         <th class="p-2.5 font-mono">${data.partId || '-'}</th>
                         <td class="p-2.5">${data.partName} <span class="text-[10px] text-gray-400">(재고:${data.stock || 0})</span></td>
@@ -858,8 +877,7 @@
             }
 
             try {
-                // 고유 문서 ID 생성 혹은 파트넘버 활용
-                const docKey = partId || docIdGenerator();
+                const docKey = partId || 'PART_' + Math.random().toString(36).substring(2, 9);
                 await db.collection("parts").doc(docKey).set({
                     partId,
                     partName,
@@ -878,10 +896,6 @@
                 console.error(e);
                 alert("등록 중 오류가 발생했습니다.");
             }
-        }
-
-        function docIdGenerator() {
-            return 'PART_' + Math.random().toString(36.substring(2, 9));
         }
 
         async function saveEngineerToFirebase() {
