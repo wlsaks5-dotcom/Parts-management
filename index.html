@@ -901,10 +901,12 @@
                     const data = doc.data();
                     const partName = data.name || data.partName || '이름 없음';
                     const qrVal = data.qrCode || '';
+                    
+                    // '수정' 텍스트가 세로로 떨어지지 않도록 whitespace-nowrap 추가
                     const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
                         <td class="p-2.5 font-bold">${doc.id}</td>
                         <td class="p-2.5">${partName}</td>
-                        <td class="p-2.5 text-right"><span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">수정</span></td>
+                        <td class="p-2.5 text-right whitespace-nowrap"><span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">수정</span></td>
                     </tr>`;
 
                     if ((data.type || 'new part') === 'test part') {
