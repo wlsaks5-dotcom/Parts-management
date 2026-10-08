@@ -128,12 +128,12 @@
                     <div class="relative search-container flex gap-2">
                         <input type="text" id="manualPartInput" placeholder="부품이름 또는 파트넘버 입력" class="w-full text-xs p-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500" autocomplete="off">
                         <button type="button" onclick="startQrScannerForAction()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap">
-                            📷 QR 스캔
+                            📷 QR/바코드 스캔
                         </button>
                         <ul id="suggestionList"></ul>
                     </div>
 
-                    <!-- 출고 화면용 QR 카메라 뷰어 영역 -->
+                    <!-- 출고 화면용 카메라 뷰어 영역 -->
                     <div id="action-qr-container" style="display: none;" class="mt-2 border border-blue-300 rounded-lg p-2 bg-blue-50">
                         <div id="action-reader" style="width: 100%;"></div>
                         <button type="button" onclick="stopQrScannerForAction()" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-1.5 rounded text-xs font-bold">
@@ -196,13 +196,13 @@
 
                     <div id="adminPartTabContent" class="space-y-4">
                         <div class="space-y-2 pt-2">
-                            <p class="text-[11px] font-bold text-gray-700">개별 부품 추가 (큐알 정보 포함)</p>
+                            <p class="text-[11px] font-bold text-gray-700">개별 부품 추가 (QR / 바코드 정보 포함)</p>
                             <input type="text" id="inputPartName" placeholder="부품 이름 (예: Pad Assembly)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                             
                             <div class="flex gap-2">
-                                <input type="text" id="inputPartId" placeholder="큐알 정보 / 파트 넘버 (품번)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                                <input type="text" id="inputPartId" placeholder="QR 또는 바코드 / 파트 넘버" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                                 <button type="button" onclick="startQrScannerForAdmin()" class="bg-purple-200 hover:bg-purple-300 text-purple-800 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap">
-                                    📷 QR 스캔
+                                    📷 스캔
                                 </button>
                             </div>
 
@@ -329,7 +329,7 @@
     <!-- 부품 수정 모달 -->
     <div id="adminPartEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-sm font-bold text-purple-900">✏️ 부품 정보 및 QR 연동 수정</h3>
+            <h3 class="text-sm font-bold text-purple-900">✏️ 부품 정보 및 바코드/QR 연동 수정</h3>
             <input type="hidden" id="editDocId">
             
             <div>
@@ -343,16 +343,16 @@
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">QR 코드 고유 정보 (인식 값)</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">바코드 / QR 코드 고유 정보</label>
                 <div class="flex gap-2">
                     <input type="text" id="modalEditPartQrCode" placeholder="스캔 또는 직접 입력" class="w-full text-xs p-2.5 border border-gray-300 rounded-lg">
                     <button type="button" onclick="startQrScannerForEdit()" class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap">
-                        📷 QR 스캔
+                        📷 스캔
                     </button>
                 </div>
             </div>
 
-            <!-- 수정 모달 내 QR 카메라 뷰어 영역 -->
+            <!-- 수정 모달 내 카메라 뷰어 영역 -->
             <div id="edit-qr-container" style="display: none;" class="border border-purple-300 rounded-lg p-2 bg-purple-50">
                 <div id="edit-reader" style="width: 100%;"></div>
                 <button type="button" onclick="stopQrScannerForEdit()" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-1.5 rounded text-xs font-bold">
@@ -538,7 +538,6 @@
             }
         }
 
-        // 출고 처리 시 현재고 재고 수량 차감 연동
         async function processCheckout() {
             if (!currentEngineer) {
                 alert("엔지니어 정보가 없습니다.");
@@ -556,7 +555,6 @@
             }
 
             try {
-                // 1. 히스토리 기록 추가
                 await db.collection("history").add({
                     partId,
                     partName,
@@ -568,7 +566,6 @@
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 2. 부품 재고 수량 실시간 차감
                 await db.collection("parts").doc(partId).update({
                     stock: firebase.firestore.FieldValue.increment(-quantity)
                 });
@@ -609,7 +606,6 @@
                     checkinTimestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 직접 입고 시 재고 증가 처리
                 await db.collection("parts").doc(partId).update({
                     stock: firebase.firestore.FieldValue.increment(quantity)
                 });
@@ -692,14 +688,34 @@
             }
         }
 
-        // 출입고 화면 QR 스캔
+        // 📷 바코드 및 QR코드 겸용 스캔 설정 (모든 주요 1차원/2차원 포맷 포함)
+        const scannerConfig = {
+            fps: 20,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                let edgeSize = Math.floor(minEdge * 0.8);
+                return { width: edgeSize, height: Math.floor(edgeSize * 0.6) }; // 바코드 형태(직사각형)에 적합하도록 비율 조정
+            },
+            aspectRatio: 1.0,
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.DATA_MATRIX
+            ]
+        };
+
         function startQrScannerForAction() {
             const container = document.getElementById('action-qr-container');
             container.style.display = 'block';
             if (!html5QrCodeAction) {
                 html5QrCodeAction = new Html5Qrcode("action-reader");
             }
-            html5QrCodeAction.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 200, height: 200 } },
+            html5QrCodeAction.start({ facingMode: "environment" }, scannerConfig,
                 (decodedText) => {
                     const matchedPart = partsCache.find(p => p.id === decodedText || (p.qrCode && p.qrCode === decodedText));
                     if (matchedPart) {
@@ -709,7 +725,7 @@
                         document.getElementById('manualPartInput').value = decodedText;
                         document.getElementById('selectedPartId').value = decodedText;
                         document.getElementById('selectedPartTypeDisplay').value = `미등록 파트 (${decodedText})`;
-                        alert(`⚠️ 등록되지 않은 QR 코드입니다. 관리자 모드에서 먼저 등록해주세요.`);
+                        alert(`⚠️ 등록되지 않은 코드입니다. 관리자 모드에서 먼저 등록해주세요.`);
                     }
                     stopQrScannerForAction();
                 }, () => {}
@@ -728,14 +744,13 @@
             }
         }
 
-        // 관리자 등록 탭 QR 스캔
         function startQrScannerForAdmin() {
             const container = document.getElementById('qr-reader-container');
             container.style.display = 'block';
             if (!html5QrCodeAdmin) {
                 html5QrCodeAdmin = new Html5Qrcode("reader");
             }
-            html5QrCodeAdmin.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 200, height: 200 } },
+            html5QrCodeAdmin.start({ facingMode: "environment" }, scannerConfig,
                 (decodedText) => {
                     document.getElementById('inputPartId').value = decodedText;
                     stopQrScannerForAdmin();
@@ -755,14 +770,13 @@
             }
         }
 
-        // 수정 모달 QR 스캔
         function startQrScannerForEdit() {
             const container = document.getElementById('edit-qr-container');
             container.style.display = 'block';
             if (!html5QrCodeEdit) {
                 html5QrCodeEdit = new Html5Qrcode("edit-reader");
             }
-            html5QrCodeEdit.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 200, height: 200 } },
+            html5QrCodeEdit.start({ facingMode: "environment" }, scannerConfig,
                 (decodedText) => {
                     document.getElementById('modalEditPartQrCode').value = decodedText;
                     stopQrScannerForEdit();
@@ -869,7 +883,7 @@
             const type = document.getElementById('inputPartType').value;
 
             if (!name || !id) {
-                alert("부품 이름과 큐알/파트 번호를 모두 입력해주세요.");
+                alert("부품 이름과 바코드/파트 번호를 모두 입력해주세요.");
                 return;
             }
 
@@ -915,7 +929,6 @@
             }
         }
 
-        // 현재고 목록에 수량 컬럼 포함하여 렌더링
         async function loadRegisteredPartsList() {
             try {
                 const snapshot = await db.collection("parts").get();
@@ -993,11 +1006,9 @@
             }
         }
 
-        // 반납(입고) 처리 시 재고 수량 다시 증가 연동
         async function processCheckin(historyId, partName, quantity) {
             if (!confirm(`'${partName}' 부품을 반납(입고) 처리하시겠습니까?`)) return;
             try {
-                // 히스토리 상태 변경
                 const historyDoc = await db.collection("history").doc(historyId).get();
                 const partId = historyDoc.data().partId;
 
@@ -1006,7 +1017,6 @@
                     checkinTimestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 재고 수량 증가
                 await db.collection("parts").doc(partId).update({
                     stock: firebase.firestore.FieldValue.increment(quantity)
                 });
@@ -1062,7 +1072,7 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                alert("부품 정보 및 QR 연동이 수정되었습니다.");
+                alert("부품 정보 및 바코드/QR 연동이 수정되었습니다.");
                 closeAdminPartEditModal();
                 loadRegisteredPartsList();
                 preloadPartsCache();
