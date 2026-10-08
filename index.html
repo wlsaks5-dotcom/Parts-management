@@ -626,7 +626,8 @@
             const overdueBanner = document.getElementById('overdueAlertBanner');
 
             try {
-                const snapshot = await db.collection("history").where("status", "==", "PENDING").orderBy("timestamp", "desc").get();
+                // 색인(Index) 에러 방지를 위해 orderBy를 제거하거나 단일 필드 조회로 안전하게 로드
+                const snapshot = await db.collection("history").where("status", "==", "PENDING").get();
                 let html = '';
                 let overdueHtml = '';
                 const now = new Date();
@@ -668,7 +669,7 @@
                 }
             } catch (e) {
                 console.error("이력 로드 실패:", e);
-                container.innerHTML = '<p class="text-center text-red-400 py-4">이력을 불러오지 못했습니다.</p>';
+                container.innerHTML = '<p class="text-center text-gray-400 py-4">이력을 불러오지 못했습니다.</p>';
             }
         }
 
@@ -701,10 +702,10 @@
 
         function stopQrScannerForAction() {
             const container = document.getElementById('action-qr-container');
-            if (html5QrCodeAction) {
-                html5QrCodeAction.stop().then(() => { container.style.display = 'none'; }).catch(() => { container.style.display = 'none'; });
+            if (html5QrCodeAction && html5QrCodeAction.isScanning) {
+                html5QrCodeAction.stop().then(() => { if(container) container.style.display = 'none'; }).catch(() => { if(container) container.style.display = 'none'; });
             } else {
-                container.style.display = 'none';
+                if(container) container.style.display = 'none';
             }
         }
 
@@ -728,10 +729,10 @@
 
         function stopQrScannerForAdmin() {
             const container = document.getElementById('qr-reader-container');
-            if (html5QrCodeAdmin) {
-                html5QrCodeAdmin.stop().then(() => { container.style.display = 'none'; }).catch(() => { container.style.display = 'none'; });
+            if (html5QrCodeAdmin && html5QrCodeAdmin.isScanning) {
+                html5QrCodeAdmin.stop().then(() => { if(container) container.style.display = 'none'; }).catch(() => { if(container) container.style.display = 'none'; });
             } else {
-                container.style.display = 'none';
+                if(container) container.style.display = 'none';
             }
         }
 
@@ -753,9 +754,10 @@
             });
         }
 
+        // 안전한 스캐너 정지 함수 (스캔 중이 아닐 때 에러 방지)
         function stopQrScannerForEdit() {
             const container = document.getElementById('edit-qr-container');
-            if (html5QrCodeEdit) {
+            if (html5QrCodeEdit && html5QrCodeEdit.isScanning) {
                 html5QrCodeEdit.stop().then(() => { 
                     if(container) container.style.display = 'none'; 
                 }).catch(() => { 
@@ -945,7 +947,7 @@
             const content = document.getElementById('modalPartHistoryContent');
             content.innerHTML = '<p class="text-center text-gray-400 py-4">불러오는 중...</p>';
             try {
-                const snapshot = await db.collection("history").where("partId", "==", partId).orderBy("timestamp", "desc").get();
+                const snapshot = await db.collection("history").where("partId", "==", partId).get();
                 let html = '';
                 if (snapshot.empty) {
                     content.innerHTML = '<p class="text-center text-gray-400 py-4">기록이 없습니다.</p>';
@@ -1001,11 +1003,10 @@
         }
 
         function closeAdminPartEditModal() {
-            document.getElementById('adminPartEditModal').style.display = 'none';
             stopQrScannerForEdit();
+            document.getElementById('adminPartEditModal').style.display = 'none';
         }
 
-        // 부품 정보 수정 함수 (안전한 set with merge 사용)
         async function saveAdminPartEdit() {
             const id = document.getElementById('editDocId').value;
             const name = document.getElementById('modalEditPartName').value.trim();
@@ -1019,7 +1020,6 @@
             }
 
             try {
-                // 문서가 존재하지 않아도 오류 없이 생성/수정되도록 set({ ... }, { merge: true }) 사용
                 await db.collection("parts").doc(id).set({
                     name,
                     stock,
@@ -1044,7 +1044,7 @@
             content.innerHTML = '<p class="text-center text-gray-400 py-4">불러오는 중...</p>';
 
             try {
-                const snapshot = await db.collection("history").where("status", "==", "COMPLETED").orderBy("timestamp", "desc").limit(50).get();
+                const snapshot = await db.collection("history").where("status", "==", "COMPLETED").limit(50).get();
                 let html = '';
                 if (snapshot.empty) {
                     content.innerHTML = '<p class="text-center text-gray-400 py-4">입고 완료된 기록이 없습니다.</p>';
