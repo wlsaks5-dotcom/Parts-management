@@ -185,9 +185,10 @@
 
                     <div id="adminPartTabContent" class="space-y-4">
                         <div class="space-y-2 pt-2">
-                            <p class="text-[11px] font-bold text-gray-700">개별 부품 추가</p>
+                            <p class="text-[11px] font-bold text-gray-700">개별 부품 추가 (큐알 정보 포함)</p>
                             <input type="text" id="inputPartName" placeholder="부품 이름 (예: Pad Assembly)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
-                            <input type="text" id="inputPartId" placeholder="파트 넘버 (품번)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
+                            <!-- 부품 등록 시에는 큐알 정보 입력 칸 유지 -->
+                            <input type="text" id="inputPartId" placeholder="큐알 정보 / 파트 넘버 (품번)" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                             <div class="grid grid-cols-2 gap-2">
                                 <input type="number" id="inputPartStock" value="0" placeholder="수량" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
                                 <select id="inputPartType" class="w-full text-xs p-2 bg-white border border-gray-300 rounded-lg text-gray-800">
@@ -299,6 +300,7 @@
         </div>
     </div>
 
+    <!-- 부품 수정 모달 (등록된 부품 목록에서 클릭 시 노출: 큐알 정보 입력칸 제거됨) -->
     <div id="adminPartEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 class="text-sm font-bold text-purple-900">✏️ 부품 정보 수정</h3>
@@ -307,10 +309,7 @@
                 <label class="block text-xs font-medium text-gray-500 mb-1">부품 이름</label>
                 <input type="text" id="modalEditPartName" class="w-full text-xs p-2.5 border border-gray-300 rounded-lg">
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">파트 넘버 (품번)</label>
-                <input type="text" id="modalEditPartId" class="w-full text-xs p-2.5 border border-gray-300 rounded-lg font-mono bg-gray-50">
-            </div>
+            <!-- 목록 클릭 시 열리는 수정창에서는 큐알 정보/파트넘버 입력 필드를 제거함 -->
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">재고 수량</label>
@@ -740,7 +739,7 @@
                 let testHtml = '';
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const row = `<tr class="hover:bg-purple-50/55 cursor-pointer" onclick="openAdminPartEditModal('${doc.id}', '${data.partId || ''}', '${data.partName}', ${data.stock || 0}, '${data.type}')">
+                    const row = `<tr class="hover:bg-purple-50/55 cursor-pointer" onclick="openAdminPartEditModal('${doc.id}', '${data.partName}', ${data.stock || 0}, '${data.type}')">
                         <th class="p-2.5 font-mono">${data.partId || '-'}</th>
                         <td class="p-2.5">${data.partName} <span class="text-[10px] text-gray-400">(재고:${data.stock || 0})</span></td>
                         <td class="p-2.5 text-right"><button onclick="event.stopPropagation(); deletePart('${doc.id}')" class="text-red-500 font-bold hover:underline">삭제</button></td>
@@ -771,10 +770,9 @@
             });
         }
 
-        function openAdminPartEditModal(docId, partId, partName, stock, type) {
+        function openAdminPartEditModal(docId, partName, stock, type) {
             document.getElementById('editDocId').value = docId;
             document.getElementById('modalEditPartName').value = partName;
-            document.getElementById('modalEditPartId').value = partId;
             document.getElementById('modalEditPartStock').value = stock;
             document.getElementById('modalEditPartType').value = type;
             document.getElementById('adminPartEditModal').style.display = 'flex';
@@ -787,7 +785,6 @@
         async function saveAdminPartEdit() {
             const docId = document.getElementById('editDocId').value;
             const partName = document.getElementById('modalEditPartName').value.trim();
-            const partId = document.getElementById('modalEditPartId').value.trim();
             const stock = parseInt(document.getElementById('modalEditPartStock').value) || 0;
             const type = document.getElementById('modalEditPartType').value;
 
@@ -798,7 +795,6 @@
 
             try {
                 await db.collection("parts").doc(docId).set({
-                    partId,
                     partName,
                     stock,
                     type,
