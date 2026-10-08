@@ -324,7 +324,7 @@
         </div>
     </div>
 
-    <!-- 부품 수정 모달 (파트넘버 + QR정보 입력 및 스캔 기능 포함) -->
+    <!-- 부품 수정 모달 -->
     <div id="adminPartEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 class="text-sm font-bold text-purple-900">✏️ 부품 정보 및 QR 연동 수정</h3>
@@ -898,10 +898,11 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    const partName = data.name || '이름 없음';
                     const qrVal = data.qrCode || '';
-                    const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${data.name}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
+                    const rowHtml = `<tr onclick="openAdminPartEditModal('${doc.id}', '${partName}', ${data.stock || 0}, '${data.type || 'new part'}', '${qrVal}')" class="hover:bg-purple-50 cursor-pointer">
                         <td class="p-2.5 font-bold">${doc.id}</td>
-                        <td class="p-2.5">${data.name}</td>
+                        <td class="p-2.5">${partName}</td>
                         <td class="p-2.5 text-right"><span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">수정</span></td>
                     </tr>`;
 
